@@ -42,7 +42,10 @@ const zustand = {
   // wenn man selbst etwas aendert -- sonst ueberschriebe ein fremder Link
   // still die eigene Liste.
   merklisteAusLink: false,
+  vergleich: false,
 };
+// Mehr Spalten werden auch am Desktop unuebersichtlich.
+const MAX_VERGLEICH = 6;
 let alle = [];
 
 // ---------------------------------------------------------------- CSV lesen
@@ -345,7 +348,9 @@ function adresseSchreiben() {
     p.set('sortierung', zustand.sortierung.feld + (zustand.sortierung.auf ? '' : '-ab'));
   }
   if (zustand.ansicht === 'tabelle') p.set('ansicht', 'tabelle');
-  if (zustand.nurMerkliste && zustand.merkliste.size) {
+  if (zustand.vergleich && zustand.merkliste.size) {
+    p.set('vergleich', [...zustand.merkliste].join(','));
+  } else if (zustand.nurMerkliste && zustand.merkliste.size) {
     p.set('merkliste', [...zustand.merkliste].join(','));
   }
   const text = p.toString().replace(/%2C/g, ',');
@@ -365,8 +370,13 @@ function adresseLesen() {
     if (SPALTEN.includes(feld)) zustand.sortierung = { feld, auf: !s.endsWith('-ab') };
   }
   zustand.ansicht = p.get('ansicht') === 'tabelle' ? 'tabelle' : 'karten';
+  const vgl = (p.get('vergleich') || '').split(',').filter(Boolean);
   const merk = (p.get('merkliste') || '').split(',').filter(Boolean);
-  if (merk.length) {
+  if (vgl.length) {
+    zustand.merkliste = new Set(vgl);
+    zustand.vergleich = true;
+    zustand.merklisteAusLink = true;
+  } else if (merk.length) {
     zustand.merkliste = new Set(merk);
     zustand.nurMerkliste = true;
     zustand.merklisteAusLink = true;
@@ -408,6 +418,111 @@ function merkenUmschalten(id) {
   zeichnen();
 }
 
+// ---------------------------------------------------------------- Vergleich
+
+/** Die gemerkten Massnahmen in der Reihenfolge, in der sie gemerkt wurden. */
+function vergleichsListe() {
+  const nachId = new Map(alle.map(e => [e.id, e]));
+  return [...zustand.merkliste].map(id => nachId.get(id)).filter(Boolean);
+}
+
+function stufeText(wert, woerter) {
+  return wert !== '' && woerter[wert]
+    ? `${punkte(wert, woerter)} ${woerter[wert]}`
+    : '<span class="leise">nicht bewertet</span>';
+}
+
+// Zeilen des Vergleichs. „besser“ sagt, welcher Wert hervorgehoben wird.
+const VERGLEICH_ZEILEN = [
+  { name: 'Risiko', html: e => e.hazard ? risikoMarken(e.hazard) : STRICH },
+  { name: 'Art', html: e => textOderStrich(e.art) },
+  { name: 'Für wen', html: e => e.akteure ? esc(zielgruppen(e.akteure).join(', ')) : STRICH },
+  { name: 'Kosten', key: 'kosten', besser: 'niedrig',
+    html: e => e.kosten && KOSTEN[e.kosten]
+      ? `${geld(e.kosten)} <span class="leise">${KOSTEN[e.kosten]}</span>`
+      : '<span class="leise">nicht angegeben</span>' },
+  { name: 'Dauer', key: 'dauer', besser: 'niedrig',
+    html: e => e.dauer && DAUER[e.dauer] ? stufeText(e.dauer, DAUER) : '<span class="leise">nicht angegeben</span>' },
+  { gruppe: 'Wirkung' },
+  ...WIRKUNGEN.map(w => ({ name: w.name, erklaerung: w.erklaerung, key: w.key, besser: 'hoch',
+    html: e => stufeText(e[w.key], STUFE) })),
+  { name: 'Steckbrief', html: e => {
+    const a = steckbriefAdresse(e.steckbrief);
+    return a ? `<a class="steckbrief" href="${esc(a)}" target="_blank" rel="noopener">PDF öffnen</a>` : STRICH;
+  } },
+];
+
+/** Welche Spalten in dieser Zeile den besten Wert haben. Hervorgehoben wird
+ *  nur, wenn sich die Werte unterscheiden -- sind alle gleich, ist keiner
+ *  „besser“. Bei Wirkungen zaehlt 0 („keine“) nicht als Bestwert. */
+function besteSpalten(zeile, liste) {
+  if (!zeile.besser) return new Set();
+  const werte = liste.map(e => parseInt(e[zeile.key], 10));
+  const gueltig = werte.filter(w => !isNaN(w) && (zeile.besser === 'niedrig' || w > 0));
+  if (!gueltig.length) return new Set();
+  const bester = zeile.besser === 'hoch' ? Math.max(...gueltig) : Math.min(...gueltig);
+  const treffer = new Set(werte.map((w, i) => (w === bester ? i : -1)).filter(i => i >= 0));
+  return treffer.size < liste.length ? treffer : new Set();
+}
+
+function vergleichZeichnen() {
+  const ziel = document.getElementById('vergleich');
+  const ganz = vergleichsListe();
+  const liste = ganz.slice(0, MAX_VERGLEICH);
+  if (liste.length < 2) {
+    ziel.innerHTML = '<p class="leer">Für einen Vergleich mindestens zwei Maßnahmen mit ☆ merken.</p>';
+    return;
+  }
+  const kopf = liste.map(e =>
+    `<th scope="col"><div class="vgl-kopf"><span>${nameHtml(e.name)}</span>` +
+    `<button type="button" class="vgl-weg" data-merken="${esc(e.id)}"` +
+    ` aria-label="${esc(e.name)} aus dem Vergleich nehmen" title="Aus dem Vergleich nehmen">✕</button></div></th>`).join('');
+  const zeilen = VERGLEICH_ZEILEN.map(z => {
+    if (z.gruppe) return `<tr class="vgl-gruppe"><th scope="rowgroup" colspan="${liste.length + 1}">${z.gruppe}</th></tr>`;
+    const beste = besteSpalten(z, liste);
+    return `<tr><th scope="row">${z.name}` +
+      (z.erklaerung ? `<span class="vgl-erklaerung">${z.erklaerung}</span>` : '') + `</th>` +
+      liste.map((e, i) => `<td${beste.has(i) ? ' class="beste"' : ''}>${z.html(e)}</td>`).join('') + `</tr>`;
+  }).join('');
+  ziel.innerHTML =
+    `<div class="vergleich-rahmen"><table class="vergleich-tabelle">` +
+      `<caption class="unsichtbar">Vergleich von ${liste.length} Maßnahmen</caption>` +
+      `<thead><tr><th scope="col" class="vgl-ecke"><span class="unsichtbar">Eigenschaft</span></th>${kopf}</tr></thead>` +
+      `<tbody>${zeilen}</tbody></table></div>` +
+    `<p class="vgl-legende"><span class="beste-muster" aria-hidden="true"></span>` +
+      ` Hervorgehoben: der günstigste, schnellste oder wirksamste Wert je Zeile.</p>` +
+    (ganz.length > MAX_VERGLEICH
+      ? `<p class="hinweis-luecke">Verglichen werden die ersten ${MAX_VERGLEICH} von ${ganz.length} gemerkten Maßnahmen. ` +
+        `Nimm mit ✕ welche heraus, um die übrigen zu sehen.</p>`
+      : '');
+}
+
+/** Leiste unten am Bildschirm, sobald etwas gemerkt ist -- damit niemand
+ *  fuer „Merkliste“ oder „Vergleichen“ ans Seitenende scrollen muss. */
+function merkleisteZeichnen() {
+  const n = zustand.merkliste.size;
+  const leiste = document.getElementById('merkleiste');
+  const zeigen = n > 0 || zustand.vergleich;
+  leiste.hidden = !zeigen;
+  document.body.classList.toggle('mit-merkleiste', zeigen);
+  document.getElementById('merk-text').textContent = n === 0 ? 'Nichts gemerkt' : `★ ${n} gemerkt`;
+
+  const nur = document.getElementById('merk-nur');
+  nur.hidden = zustand.vergleich;
+  nur.setAttribute('aria-pressed', zustand.nurMerkliste);
+
+  const vgl = document.getElementById('merk-vergleich');
+  if (zustand.vergleich) {
+    vgl.textContent = '← Zurück zur Liste';
+    vgl.disabled = false;
+    vgl.title = '';
+  } else {
+    vgl.textContent = n > 1 ? `${Math.min(n, MAX_VERGLEICH)} vergleichen` : 'Vergleichen';
+    vgl.disabled = n < 2;
+    vgl.title = n < 2 ? 'Mindestens zwei Maßnahmen mit ☆ merken' : '';
+  }
+}
+
 // ----------------------------------------------------------------- Zeichnen
 
 function effektiveAnsicht() {
@@ -426,31 +541,38 @@ function filterModusSetzen() {
 
 function zeichnen() {
   const treffer = sortieren(gefiltert());
-  const karten = effektiveAnsicht() === 'karten';
+  const vergleich = zustand.vergleich;
+  const karten = !vergleich && effektiveAnsicht() === 'karten';
+  const tabelleZeigen = !vergleich && !karten;
+  document.body.classList.toggle('im-vergleich', vergleich);
   filterModusSetzen();
 
   const liste = document.getElementById('karten');
   const tabelle = document.getElementById('tabelle-rahmen');
   liste.hidden = !karten;
-  tabelle.hidden = karten;
+  tabelle.hidden = !tabelleZeigen;
+  document.getElementById('vergleich').hidden = !vergleich;
   if (karten) liste.replaceChildren(...treffer.map(karteBauen));
-  else document.getElementById('koerper').replaceChildren(...treffer.map(zeileBauen));
+  else if (tabelleZeigen) document.getElementById('koerper').replaceChildren(...treffer.map(zeileBauen));
+  else vergleichZeichnen();
 
   const n = treffer.length;
-  document.getElementById('zaehler').textContent =
-    n === alle.length ? `Alle ${alle.length} Maßnahmen` : `${n} von ${alle.length} Maßnahmen`;
+  const imVergleich = Math.min(vergleichsListe().length, MAX_VERGLEICH);
+  document.getElementById('zaehler').textContent = vergleich
+    ? `Vergleich von ${imVergleich} Maßnahme${imVergleich === 1 ? '' : 'n'}`
+    : n === alle.length ? `Alle ${alle.length} Maßnahmen` : `${n} von ${alle.length} Maßnahmen`;
   document.getElementById('filter-anwenden').textContent =
     n === 1 ? '1 Maßnahme anzeigen' : `${n} Maßnahmen anzeigen`;
 
   const leer = document.getElementById('leer');
-  leer.hidden = n > 0;
+  leer.hidden = n > 0 || vergleich;
   leer.textContent = zustand.nurMerkliste
     ? 'Auf der Merkliste steht nichts, das zu diesen Filtern passt.'
     : 'Zu dieser Auswahl gibt es keine Maßnahme. Nimm einen Filter heraus.';
 
   const luecken = wegenLuecke();
   const hinweis = document.getElementById('ausgeblendet');
-  hinweis.hidden = luecken === 0;
+  hinweis.hidden = luecken === 0 || vergleich;
   if (luecken) {
     hinweis.textContent =
       `${luecken} Maßnahme${luecken === 1 ? '' : 'n'} ` +
@@ -463,13 +585,7 @@ function zeichnen() {
   fa.hidden = !anzahl;
   fa.textContent = anzahl;
 
-  const merk = document.getElementById('merkliste-zeigen');
-  const ma = document.getElementById('merk-anzahl');
-  ma.hidden = !zustand.merkliste.size;
-  ma.textContent = zustand.merkliste.size;
-  merk.setAttribute('aria-pressed', zustand.nurMerkliste);
-  merk.disabled = !zustand.merkliste.size && !zustand.nurMerkliste;
-  merk.title = merk.disabled ? 'Mit ☆ an einer Maßnahme merken' : '';
+  merkleisteZeichnen();
 
   document.getElementById('sortierung').value =
     zustand.sortierung.feld && document.querySelector(`#sortierung option[value="${zustand.sortierung.feld}"]`)
@@ -555,8 +671,10 @@ function druckkopfFuellen() {
   if (suchbegriff()) teile.push(`Suche „${suchbegriff()}“`);
   if (zustand.nurMerkliste) teile.unshift('Merkliste');
   const n = gefiltert().length;
-  document.getElementById('druck-auswahl').textContent =
-    `${n} Maßnahme${n === 1 ? '' : 'n'}` + (teile.length ? ` · Auswahl: ${teile.join(' · ')}` : ' · ohne Filter');
+  const imVergleich = Math.min(vergleichsListe().length, MAX_VERGLEICH);
+  document.getElementById('druck-auswahl').textContent = zustand.vergleich
+    ? `Vergleich von ${imVergleich} Maßnahmen`
+    : `${n} Maßnahme${n === 1 ? '' : 'n'}` + (teile.length ? ` · Auswahl: ${teile.join(' · ')}` : ' · ohne Filter');
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
   document.getElementById('druck-stand').textContent = `Stand ${heute} · ${location.href}`;
 }
@@ -573,7 +691,7 @@ window.addEventListener('afterprint', () => {
 });
 
 function alsCsv() {
-  const treffer = sortieren(gefiltert());
+  const treffer = zustand.vergleich ? vergleichsListe().slice(0, MAX_VERGLEICH) : sortieren(gefiltert());
   const kopf = ['Maßnahme', 'Hazard', 'Art', 'Akteure', 'Kosten', 'Umsetzungsdauer',
                 'Wirksamkeit - Rückhalt', 'Wirksamkeit - Ableitung',
                 'Wirksamkeit - Versickerung', 'Wirksamkeit - Kühlung',
@@ -585,7 +703,7 @@ function alsCsv() {
   const a = document.createElement('a');
   const heute = new Date().toISOString().slice(0, 10);
   a.href = adresse;
-  a.download = `${heute} Massnahmenauswahl.csv`;
+  a.download = `${heute} ${zustand.vergleich ? 'Massnahmenvergleich' : 'Massnahmenauswahl'}.csv`;
   document.body.append(a);
   a.click();
   a.remove();
@@ -641,10 +759,17 @@ function verdrahten() {
     th.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortieren(); } });
   });
 
-  document.getElementById('merkliste-zeigen').addEventListener('click', () => {
+  document.getElementById('merk-nur').addEventListener('click', () => {
     if (zustand.nurMerkliste) merklisteVerlassen();
     else zustand.nurMerkliste = true;
     zeichnen();
+  });
+  document.getElementById('merk-vergleich').addEventListener('click', () => {
+    zustand.vergleich = !zustand.vergleich;
+    if (zustand.vergleich) zustand.nurMerkliste = false;
+    zeichnen();
+    // Zum Anfang der Ergebnisse, damit man den Vergleich nicht erst suchen muss.
+    document.querySelector('.ergebnis').scrollIntoView({ block: 'start' });
   });
   document.getElementById('teilen').addEventListener('click', linkKopieren);
   document.getElementById('drucken').addEventListener('click', () => window.print());
@@ -687,7 +812,10 @@ async function starten() {
   verdrahten();
   filterModusSetzen();
   try {
-    const antwort = await fetch(DATEI);
+    // no-cache: beim Server nachfragen, ob es einen neueren Stand gibt.
+    // Sonst saehe man nach dem Veroeffentlichen bis zu zehn Minuten lang
+    // die alte Tabelle; ist sie unveraendert, antwortet der Server knapp.
+    const antwort = await fetch(DATEI, { cache: 'no-cache' });
     if (!antwort.ok) throw new Error(`${antwort.status} ${antwort.statusText}`);
     alle = einlesen(await antwort.text());
     // Was auf der Merkliste steht, aber nicht mehr in der Tabelle, faellt

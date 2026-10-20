@@ -105,6 +105,15 @@
       </div>
     </div>
 
+    <!-- Erscheint, sobald etwas gemerkt ist; unten am Bildschirm angeheftet. -->
+    <div id="merkleiste" class="merkleiste" role="region" aria-label="Merkliste" hidden>
+      <div class="merkleiste-inhalt">
+        <span id="merk-text" class="merk-text"></span>
+        <button type="button" id="merk-nur" class="knopf-zweit" aria-pressed="false">Nur Merkliste</button>
+        <button type="button" id="merk-vergleich" class="knopf">Vergleichen</button>
+      </div>
+    </div>
+
     <div id="chips" class="chips" aria-label="Aktive Filter"></div>
 
     <p id="ausgeblendet" class="hinweis-luecke" hidden></p>
@@ -137,12 +146,11 @@
       </table>
     </div>
 
+    <div id="vergleich" class="vergleich" hidden></div>
+
     <p id="leer" class="leer" hidden></p>
 
     <div class="weitergeben" aria-label="Auswahl weitergeben">
-      <button type="button" id="merkliste-zeigen" class="knopf-zweit" aria-pressed="false">
-        ☆ Merkliste <span id="merk-anzahl" class="anzahl" hidden></span>
-      </button>
       <button type="button" id="teilen" class="knopf-zweit">Link zur Auswahl kopieren</button>
       <button type="button" id="drucken" class="knopf-zweit">Drucken / PDF</button>
       <button type="button" id="herunterladen" class="knopf-zweit">Als CSV</button>
