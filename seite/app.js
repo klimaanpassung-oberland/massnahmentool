@@ -600,6 +600,7 @@ function zeichnen() {
 
   chipsZeichnen();
   adresseSchreiben();
+  kopfleisteMessen();
   hoeheMelden();
 }
 
@@ -712,7 +713,16 @@ function alsCsv() {
 
 // -------------------------------------------------------------------- Start
 
+/** Die Tabellenkoepfe haften unter der angehefteten Ergebnisleiste. Deren
+ *  Hoehe aendert sich mit der Fensterbreite (Umbruch) und wird mitgefuehrt. */
+function kopfleisteMessen() {
+  const h = document.querySelector('.ergebnis-kopf').offsetHeight;
+  document.documentElement.style.setProperty('--kopfleiste', h + 'px');
+}
+
 function verdrahten() {
+  new ResizeObserver(kopfleisteMessen).observe(document.querySelector('.ergebnis-kopf'));
+  window.addEventListener('resize', kopfleisteMessen);
   document.querySelectorAll('.filter input[type="checkbox"]')
     .forEach(k => k.addEventListener('change', zeichnen));
   document.getElementById('suchfeld').addEventListener('input', zeichnen);

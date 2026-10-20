@@ -230,6 +230,13 @@ body {
   gap: 10px 12px;
   flex-wrap: wrap;
   margin-bottom: 10px;
+  /* Bleibt beim Scrollen oben stehen; die Tabellenkoepfe rutschen darunter
+     (--kopfleiste setzt app.js auf die Hoehe dieser Leiste). */
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--grund);
+  padding: 8px 0;
 }
 #zaehler { margin: 0; font-weight: 600; }
 .ansicht-wahl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -420,9 +427,13 @@ tbody tr:hover { background: var(--blau-hell); }
    braucht gut 930 px), darunter bleibt das seitliche Wischen. */
 @media (min-width: 1000px) {
   .tabelle-rahmen { overflow: visible; }
-  #tabelle thead { position: sticky; top: 0; z-index: 3; }
-  /* Mit border-collapse wandern die Linien nicht mit; ein Schatten schon. */
-  #tabelle thead th { box-shadow: inset 0 -2px 0 var(--linie); border-bottom-color: transparent; }
+  /* Eigener Hintergrund, damit beim Mitlaufen nichts von der Tabelle
+     darunter durchscheint. */
+  #tabelle thead { position: sticky; top: var(--kopfleiste, 0px); z-index: 3; background: var(--flaeche); }
+  /* Mit border-collapse wandern die Linien nicht mit; ein Schatten schon.
+     Die Rahmen selbst fallen weg -- durchsichtig liessen sie die Zeilen
+     darunter durchscheinen. */
+  #tabelle thead th { box-shadow: inset 0 -2px 0 var(--linie); border-bottom: 0; }
   #tabelle thead th.gruppe { box-shadow: inset 0 -1px 0 var(--linie); }
   #tabelle thead tr:first-child th:first-child { border-top-left-radius: 8px; }
   #tabelle thead tr:first-child th:last-child { border-top-right-radius: 8px; }
