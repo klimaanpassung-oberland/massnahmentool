@@ -12,6 +12,7 @@
   --flaeche: #ffffff;
   --grund: #f4f6f8;
   --punkt-leer: #cfd4da;
+  --punkt-rand: #a9b1bb;
   --hitze: #b4441f;
   --hitze-hell: #fbe9e4;
 }
@@ -28,6 +29,7 @@
     --flaeche: #181c22;
     --grund: #11141a;
     --punkt-leer: #3d444e;
+    --punkt-rand: #6b7480;
     --hitze: #f39a7e;
     --hitze-hell: #3a2220;
   }
@@ -428,7 +430,7 @@ tbody tr:hover { background: var(--blau-hell); }
 #tabelle td { vertical-align: middle; }
 .zellmarken { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 #tabelle .marke { font-size: .74rem; padding: 0 6px; }
-#tabelle .punkte { letter-spacing: 0; font-size: .82rem; }
+#tabelle .punkte { font-size: .82rem; }
 .spalte-merken { width: 36px; padding: 2px 0 2px 4px !important; }
 .spalte-merken .merken { margin: 0; width: 32px; height: 32px; font-size: 1.15rem; }
 
@@ -436,9 +438,22 @@ tbody tr:hover { background: var(--blau-hell); }
 
 /* Bewertungspunkte: drei Stufen, gefuellt oder leer. Die Zahl steht
    zusaetzlich im title und im aria-label, damit sie vorlesbar bleibt. */
-.punkte { white-space: nowrap; letter-spacing: 1px; }
-.punkt-voll { color: var(--blau); }
-.punkt-leer { color: var(--punkt-leer); }
+/* Als Kreise gezeichnet statt als Zeichen ● und ○: Die beiden Zeichen
+   fallen je nach Schrift verschieden gross aus. So sind gefuellte und leere
+   Punkte gleich gross, und der Rand der leeren ist kraeftig genug. */
+.punkte { white-space: nowrap; display: inline-flex; gap: 3px; vertical-align: -.05em; }
+.punkt {
+  display: inline-block;
+  width: .7em;
+  height: .7em;
+  border-radius: 50%;
+  border: 1.6px solid var(--blau);
+  box-sizing: border-box;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.punkt-voll { background: var(--blau); }
+.punkt-leer { border-color: var(--punkt-rand); background: none; }
 
 .geld { white-space: nowrap; font-weight: 600; color: var(--blau); }
 

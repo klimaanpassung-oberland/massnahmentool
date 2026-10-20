@@ -92,8 +92,8 @@ function punkte(wert, beschriftung) {
   if (n === 0) return '<span class="fehlt" title="keine">0</span>';
   const text = (beschriftung && beschriftung[wert]) || wert;
   return `<span class="punkte" title="${text}" aria-label="${text}">` +
-         `<span class="punkt-voll" aria-hidden="true">${'●'.repeat(n)}</span>` +
-         `<span class="punkt-leer" aria-hidden="true">${'○'.repeat(3 - n)}</span></span>`;
+         '<span class="punkt punkt-voll" aria-hidden="true"></span>'.repeat(n) +
+         '<span class="punkt punkt-leer" aria-hidden="true"></span>'.repeat(3 - n) + '</span>';
 }
 
 function geld(wert) {
