@@ -34,9 +34,12 @@
       <label for="schluessel" class="unsichtbar">Zugangsschlüssel</label>
       <input type="password" id="schluessel" placeholder="github_pat_…" spellcheck="false">
       <button type="submit" class="knopf">Verbinden</button>
-      <label class="haken"><input type="checkbox" id="merken"> bis zum Schließen des Tabs merken</label>
+      <label class="haken"><input type="checkbox" id="merken"> auf diesem Gerät merken</label>
     </form>
     <p id="verbindung" class="status" role="status">Nicht verbunden.</p>
+    <p id="abmelden-zeile" hidden>
+      <button type="button" id="abmelden" class="knopf-schlicht">Abmelden und Schlüssel auf diesem Gerät vergessen</button>
+    </p>
 
     <details class="anleitung">
       <summary>Wie bekomme ich einen Zugangsschlüssel?</summary>
@@ -46,8 +49,13 @@
         <li><b>Resource owner:</b> klimaanpassung-oberland.
             <b>Repository access:</b> „Only select repositories“ → massnahmendatenbank.</li>
         <li><b>Permissions → Repository permissions → Contents:</b> „Read and write“. Sonst nichts.</li>
-        <li>Ablaufdatum setzen (z. B. 90 Tage), erzeugen, den Schlüssel kopieren und oben einfügen.</li>
+        <li><b>Expiration:</b> so lang, wie die Organisation erlaubt (z. B. ein Jahr).
+            Erzeugen, den Schlüssel kopieren und oben einfügen.</li>
       </ol>
+      <p>Mit <b>„auf diesem Gerät merken“</b> verbindet sich die Seite danach bei
+         jedem Öffnen von selbst, bis der Schlüssel abläuft. Das nur auf dem
+         eigenen Rechner anhaken, nicht auf einem gemeinsam genutzten. Ohne den
+         Haken gilt die Verbindung bis zum Schließen des Tabs.</p>
       <p>Verlangt die Organisation eine Freigabe für solche Schlüssel, muss ein
          Organisations-Admin ihn einmal bestätigen.</p>
     </details>

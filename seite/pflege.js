@@ -111,6 +111,10 @@ async function api(pfad, optionen = {}) {
     body: optionen.daten ? JSON.stringify(optionen.daten) : undefined,
     cache: 'no-store',
   });
+  // Bei Fine-grained Tokens nennt GitHub hier das Ablaufdatum -- sofern der
+  // Browser die Angabe herausgibt; sonst bleibt sie eben unbekannt.
+  const ablauf = antwort.headers.get('github-authentication-token-expiration');
+  if (ablauf) zustand.ablauf = ablauf;
   if (!antwort.ok) {
     let meldung = antwort.statusText;
     try { meldung = (await antwort.json()).message || meldung; } catch { /* kein JSON */ }
@@ -132,9 +136,53 @@ function apiFehlerText(f) {
   return `GitHub meldet: ${f.message} (${f.status}).`;
 }
 
-async function verbinden(schluessel) {
+// ----------------------------------------------------- Schluessel merken
+
+// „Auf diesem Geraet merken“ legt den Schluessel in localStorage, sonst gilt
+// er nur fuer diesen Tab (sessionStorage). localStorage teilen sich alle
+// Seiten unter klimaanpassung-oberland.github.io; der Schluessel darf aber
+// ohnehin nur Inhalte dieses einen Repositorys schreiben.
+const SPEICHER = 'kare-schluessel';
+
+function schluesselLesen() {
+  try {
+    const dauerhaft = localStorage.getItem(SPEICHER);
+    if (dauerhaft) return { schluessel: dauerhaft, dauerhaft: true };
+    const tab = sessionStorage.getItem(SPEICHER);
+    if (tab) return { schluessel: tab, dauerhaft: false };
+  } catch { /* privates Fenster o. ae. */ }
+  return null;
+}
+
+function schluesselMerken(schluessel, dauerhaft) {
+  try {
+    if (dauerhaft) { localStorage.setItem(SPEICHER, schluessel); sessionStorage.removeItem(SPEICHER); }
+    else { sessionStorage.setItem(SPEICHER, schluessel); localStorage.removeItem(SPEICHER); }
+  } catch { /* dann eben nicht */ }
+}
+
+function schluesselVergessen() {
+  try { localStorage.removeItem(SPEICHER); sessionStorage.removeItem(SPEICHER); } catch { /* egal */ }
+}
+
+/** '2027-10-20 10:00:00 +0200' oder '... UTC' -> Date, sonst null. */
+function ablaufDatum(text) {
+  if (!text) return null;
+  const iso = text.trim().replace(' ', 'T').replace(/ UTC$/, 'Z')
+    .replace(/ ([+-]\d\d)(\d\d)$/, '$1:$2');
+  const d = new Date(iso);
+  return isNaN(d) ? null : d;
+}
+
+function verbindungAnzeigen(verbunden) {
+  $('verbinden').hidden = verbunden;
+  $('abmelden-zeile').hidden = !verbunden;
+}
+
+async function verbinden(schluessel, { gespeichert = false } = {}) {
   zustand.schluessel = schluessel.trim();
-  status('verbindung', 'Verbinde …');
+  zustand.ablauf = null;
+  status('verbindung', gespeichert ? 'Verbinde mit dem gemerkten Schlüssel …' : 'Verbinde …');
   try {
     const repo = await api('');
     let wer = '';
@@ -142,16 +190,48 @@ async function verbinden(schluessel) {
     zustand.verbunden = true;
     const recht = repo.permissions && repo.permissions.push === false
       ? ' — aber ohne Schreibrecht. Veröffentlichen wird nicht gehen.' : '.';
-    status('verbindung', `Verbunden${wer ? ' als ' + wer : ''} mit ${repo.full_name}${recht}`,
-           recht === '.' ? 'gut' : 'warnung');
-    try {
-      if ($('merken').checked) sessionStorage.setItem('kare-schluessel', zustand.schluessel);
-    } catch { /* privates Fenster */ }
+
+    let gueltig = '', art = recht === '.' ? 'gut' : 'warnung';
+    const ablauf = ablaufDatum(zustand.ablauf);
+    if (ablauf) {
+      const tage = Math.floor((ablauf - Date.now()) / 86400000);
+      gueltig = ` Schlüssel gültig bis ${ablauf.toLocaleDateString('de-DE')}`;
+      if (tage <= 14) {
+        gueltig += ` — läuft in ${tage <= 0 ? 'weniger als einem Tag' : tage === 1 ? 'einem Tag' : tage + ' Tagen'} ab. ` +
+          'Bitte rechtzeitig einen neuen anlegen.';
+        art = 'warnung';
+      } else gueltig += '.';
+    }
+    status('verbindung', `Verbunden${wer ? ' als ' + wer : ''} mit ${repo.full_name}${recht}${gueltig}`, art);
+    if (!gespeichert) schluesselMerken(zustand.schluessel, $('merken').checked);
+    $('schluessel').value = '';
+    verbindungAnzeigen(true);
   } catch (f) {
     zustand.verbunden = false;
     zustand.schluessel = '';
-    status('verbindung', apiFehlerText(f), 'fehler');
+    // Abgelaufen oder widerrufen: vergessen, sonst scheitert jedes Oeffnen
+    // erneut. Bei einem Netzfehler dagegen behalten.
+    if (gespeichert && (f.status === 401 || f.status === 403)) {
+      schluesselVergessen();
+      status('verbindung', 'Der gemerkte Schlüssel gilt nicht mehr — vermutlich abgelaufen. ' +
+        'Bitte einen neuen anlegen und eintragen (Anleitung unten).', 'fehler');
+    } else {
+      status('verbindung', apiFehlerText(f), 'fehler');
+    }
+    verbindungAnzeigen(false);
   }
+  await standLaden();
+}
+
+async function abmelden() {
+  schluesselVergessen();
+  zustand.schluessel = '';
+  zustand.verbunden = false;
+  zustand.ablauf = null;
+  verbindungAnzeigen(false);
+  status('verbindung', 'Abgemeldet. Der Schlüssel ist auf diesem Gerät nicht mehr gespeichert.', 'leise');
+  $('verlauf').replaceChildren(el('p', { class: 'leise' }, 'Sichtbar nach dem Verbinden in Schritt 1.'));
+  $('verlauf-mehr').hidden = true;
   await standLaden();
 }
 
@@ -847,9 +927,7 @@ function starten() {
     const s = $('schluessel').value;
     if (s.trim()) verbinden(s);
   });
-  $('merken').addEventListener('change', e => {
-    try { if (!e.target.checked) sessionStorage.removeItem('kare-schluessel'); } catch { /* egal */ }
-  });
+  $('abmelden').addEventListener('click', abmelden);
   $('vorlage').addEventListener('click', () => vorlageHerunterladen());
   $('bestaetigen').addEventListener('change', zeichnen);
   $('verlauf-mehr').addEventListener('click', () => verlaufLaden(true));
@@ -859,11 +937,10 @@ function starten() {
   ablageEinrichten('ablage-tabelle', 'datei-tabelle', d => tabelleAufnehmen(d[0]));
   ablageEinrichten('ablage-pdf', 'datei-pdf', pdfsAufnehmen);
 
-  let gemerkt = null;
-  try { gemerkt = sessionStorage.getItem('kare-schluessel'); } catch { /* egal */ }
+  const gemerkt = schluesselLesen();
   if (gemerkt) {
-    $('merken').checked = true;
-    verbinden(gemerkt);
+    $('merken').checked = gemerkt.dauerhaft;
+    verbinden(gemerkt.schluessel, { gespeichert: true });
   } else {
     standLaden();
   }

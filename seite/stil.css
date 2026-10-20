@@ -494,6 +494,7 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
 .unsichtbar { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 .zeile-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
+.zeile-form[hidden] { display: none; }
 .zeile-form input[type="password"], .veroeffentlichen input[type="text"] {
   flex: 1 1 260px;
   min-width: 0;
