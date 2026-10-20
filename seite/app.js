@@ -12,13 +12,45 @@ const SPALTEN = ['name', 'hazard', 'art', 'akteure', 'kosten', 'dauer',
                  'rueckhalt', 'ableitung', 'versickerung', 'kuehlung',
                  'aufwertung', 'steckbrief'];
 
-const STUFE = { '1': 'gering', '2': 'mittel', '3': 'hoch' };
+const STUFE = { '0': 'keine', '1': 'gering', '2': 'mittel', '3': 'hoch' };
 const DAUER = { '1': 'kurz', '2': 'mittel', '3': 'lang' };
+const KOSTEN = { '1': 'bis 20.000 €', '2': '20.000 bis 100.000 €', '3': 'über 100.000 €' };
+const ZIELGRUPPE = { K: 'Kommunen', U: 'Unternehmen', P: 'Haushalte' };
+const WIRKUNGEN = [
+  { key: 'rueckhalt', name: 'Rückhalt', erklaerung: 'hält Regenwasser zurück' },
+  { key: 'ableitung', name: 'Ableitung', erklaerung: 'leitet Wasser schadlos ab' },
+  { key: 'versickerung', name: 'Versickerung', erklaerung: 'lässt Wasser im Boden versickern' },
+  { key: 'kuehlung', name: 'Kühlung', erklaerung: 'senkt die Temperatur' },
+  { key: 'aufwertung', name: 'Stadtstruktur', erklaerung: 'wertet Ort und Stadtbild auf' },
+];
 
+// Wie die Auswahl „Sortieren“ ordnet: Kosten und Dauer niedrig zuerst,
+// Wirkungen hoch zuerst.
+const SORTIER_RICHTUNG = { name: true, kosten: true, dauer: true, hazard: true, art: true, akteure: true };
+
+// Schmal = Handy. Gleiche Grenze wie in stil.css.
+const SCHMAL = window.matchMedia('(max-width: 860px)');
+
+const zustand = {
+  sortierung: { feld: null, auf: true },
+  ansicht: 'karten',
+  merkliste: new Set(),
+  nurMerkliste: false,
+  // Kam die Merkliste aus einem geteilten Link, wird sie erst gespeichert,
+  // wenn man selbst etwas aendert -- sonst ueberschriebe ein fremder Link
+  // still die eigene Liste.
+  merklisteAusLink: false,
+};
 let alle = [];
-let sortierung = { feld: null, auf: true };
 
 // ---------------------------------------------------------------- CSV lesen
+
+/** Kurzer, lesbarer Schluessel fuer Links und Merkliste. */
+function kennung(name) {
+  return name.toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 function einlesen(text) {
   const zeilen = csvZerlegen(text);
@@ -27,6 +59,7 @@ function einlesen(text) {
     .map(z => {
       const eintrag = {};
       SPALTEN.forEach((s, i) => { eintrag[s] = (z[i] || '').trim(); });
+      eintrag.id = kennung(eintrag.name);
       return eintrag;
     });
 }
@@ -40,72 +73,133 @@ function esc(wert) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+const STRICH = '<span class="fehlt" title="keine Angabe">–</span>';
+
 function punkte(wert, beschriftung) {
   const n = parseInt(wert, 10);
-  if (!wert || isNaN(n)) return '<span class="fehlt" title="keine Angabe">–</span>';
+  if (!wert || isNaN(n)) return STRICH;
   if (n === 0) return '<span class="fehlt" title="keine">0</span>';
-  const voll = '●'.repeat(n), leer = '○'.repeat(3 - n);
   const text = (beschriftung && beschriftung[wert]) || wert;
   return `<span class="punkte" title="${text}" aria-label="${text}">` +
-         `<span class="punkt-voll">${voll}</span>` +
-         `<span class="punkt-leer">${leer}</span></span>`;
+         `<span class="punkt-voll" aria-hidden="true">${'●'.repeat(n)}</span>` +
+         `<span class="punkt-leer" aria-hidden="true">${'○'.repeat(3 - n)}</span></span>`;
 }
 
 function geld(wert) {
   const n = parseInt(wert, 10);
-  if (!wert || isNaN(n) || n < 1) return '<span class="fehlt" title="keine Angabe">–</span>';
-  const texte = { 1: 'bis 20.000 €', 2: '20.000 bis 100.000 €', 3: 'über 100.000 €' };
-  return `<span class="geld" title="${texte[n]}" aria-label="${texte[n]}">${'€'.repeat(n)}</span>`;
+  if (!wert || isNaN(n) || n < 1) return STRICH;
+  return `<span class="geld" title="${KOSTEN[n]}" aria-label="${KOSTEN[n]}">${'€'.repeat(n)}</span>`;
 }
 
-const ZIELGRUPPE = { K: 'Kommunen', U: 'Unternehmen', P: 'Haushalte' };
-
-function zielgruppe(wert) {
-  if (!wert) return '<span class="fehlt">–</span>';
-  return wert.split('').map(b => `<span class="marke">${esc(ZIELGRUPPE[b] || b)}</span>`).join(' ');
+function zielgruppen(wert) {
+  return wert.split('').map(b => ZIELGRUPPE[b] || b);
 }
 
 function textOderStrich(wert) {
-  return wert ? esc(wert) : '<span class="fehlt" title="keine Angabe">–</span>';
+  return wert ? esc(wert) : STRICH;
 }
 
 /** Ein Steckbrief ist entweder ein Dateiname im Ordner steckbriefe/ oder ein
  *  vollstaendiger Link auf eine Datei anderswo. Andere Adressarten (etwa
  *  javascript:) werden nicht verlinkt. */
-function steckbrief(eintrag) {
-  const wert = eintrag.steckbrief;
-  if (!wert) return '<span class="fehlt">–</span>';
-  let pfad;
-  if (/^https?:\/\//i.test(wert)) pfad = wert;
-  else if (/^[^/\\:]+$/.test(wert)) pfad = 'steckbriefe/' + encodeURIComponent(wert);
-  else return '<span class="fehlt">–</span>';
-  return `<a class="steckbrief" href="${esc(pfad)}" target="_blank" rel="noopener">PDF öffnen</a>`;
+function steckbriefAdresse(wert) {
+  if (!wert) return null;
+  if (/^https?:\/\//i.test(wert)) return wert;
+  if (/^[^/\\:]+$/.test(wert)) return 'steckbriefe/' + encodeURIComponent(wert);
+  return null;
+}
+
+function risikoMarken(hazard) {
+  if (!hazard) return '<span class="marke marke-leer">Risiko nicht angegeben</span>';
+  return hazard.split(/\s*&\s*/).map(r => {
+    const art = /hitze/i.test(r) ? 'hitze' : /starkregen/i.test(r) ? 'regen' : 'sonst';
+    return `<span class="marke marke-${art}">${esc(r)}</span>`;
+  }).join(' ');
+}
+
+function merkKnopf(e) {
+  const an = zustand.merkliste.has(e.id);
+  return `<button type="button" class="merken" data-merken="${esc(e.id)}" aria-pressed="${an}"` +
+         ` title="${an ? 'Von der Merkliste nehmen' : 'Auf die Merkliste'}"` +
+         ` aria-label="${esc(e.name)} ${an ? 'von der Merkliste nehmen' : 'merken'}">${an ? '★' : '☆'}</button>`;
+}
+
+/** Die Wirkungen, die tatsaechlich bewertet sind, staerkste zuerst. */
+function staerken(e) {
+  return WIRKUNGEN.filter(w => parseInt(e[w.key], 10) > 0)
+    .sort((a, b) => e[b.key] - e[a.key]);
+}
+
+function karteBauen(e) {
+  const li = document.createElement('li');
+  li.className = 'karte';
+  const st = staerken(e);
+  const bewertet = WIRKUNGEN.some(w => e[w.key] !== '');
+  const wirkung = st.length
+    ? st.map(w => `<span class="wirkung"><span class="wirkung-name">${w.name}</span> ${STUFE[e[w.key]]}</span>`).join('')
+    : `<span class="leise">${bewertet ? 'laut Bewertung keine' : 'nicht bewertet'}</span>`;
+  const steckbrief = steckbriefAdresse(e.steckbrief);
+  const kosten = e.kosten && KOSTEN[e.kosten]
+    ? `${geld(e.kosten)} <span class="leise">${KOSTEN[e.kosten]}</span>`
+    : '<span class="leise">nicht angegeben</span>';
+  const dauer = e.dauer && DAUER[e.dauer]
+    ? `${punkte(e.dauer, DAUER)} ${DAUER[e.dauer]}`
+    : '<span class="leise">nicht angegeben</span>';
+  const fuer = e.akteure ? esc(zielgruppen(e.akteure).join(' · ')) : '<span class="leise">nicht angegeben</span>';
+
+  li.innerHTML =
+    `<article aria-labelledby="k-${esc(e.id)}">` +
+      `<div class="karte-kopf">` +
+        `<h3 id="k-${esc(e.id)}">${esc(e.name)}</h3>${merkKnopf(e)}` +
+      `</div>` +
+      `<p class="karte-marken">${risikoMarken(e.hazard)}` +
+        (e.art ? ` <span class="karte-art">${esc(e.art)}</span>` : '') + `</p>` +
+      `<dl class="fakten">` +
+        `<div><dt>Kosten</dt><dd>${kosten}</dd></div>` +
+        `<div><dt>Dauer</dt><dd>${dauer}</dd></div>` +
+        `<div><dt>Wirkung</dt><dd class="wirkungen">${wirkung}</dd></div>` +
+        `<div><dt>Für</dt><dd>${fuer}</dd></div>` +
+      `</dl>` +
+      // Ist gar nichts bewertet, gibt es auch nichts aufzuklappen.
+      (bewertet
+        ? `<details class="alle-wirkungen"><summary>Alle Bewertungen</summary><dl>` +
+          WIRKUNGEN.map(w => `<div><dt>${w.name} <span class="leise">– ${w.erklaerung}</span></dt>` +
+            `<dd>${e[w.key] !== '' ? `${punkte(e[w.key], STUFE)} ${STUFE[e[w.key]] || esc(e[w.key])}` : '<span class="leise">nicht bewertet</span>'}</dd></div>`).join('') +
+          `</dl></details>`
+        : '') +
+      (steckbrief
+        ? `<a class="steckbrief-knopf" href="${esc(steckbrief)}" target="_blank" rel="noopener">Steckbrief öffnen (PDF)</a>`
+        : '') +
+    `</article>`;
+  return li;
 }
 
 function zeileBauen(e) {
   const tr = document.createElement('tr');
+  const steckbrief = steckbriefAdresse(e.steckbrief);
   tr.innerHTML =
+    `<td class="spalte-merken">${merkKnopf(e)}</td>` +
     `<td>${esc(e.name)}</td>` +
     `<td>${textOderStrich(e.hazard)}</td>` +
     `<td>${textOderStrich(e.art)}</td>` +
-    `<td>${zielgruppe(e.akteure)}</td>` +
+    `<td>${e.akteure ? zielgruppen(e.akteure).map(z => `<span class="marke">${esc(z)}</span>`).join(' ') : STRICH}</td>` +
     `<td>${geld(e.kosten)}</td>` +
     `<td>${punkte(e.dauer, DAUER)}</td>` +
-    `<td>${punkte(e.rueckhalt, STUFE)}</td>` +
-    `<td>${punkte(e.ableitung, STUFE)}</td>` +
-    `<td>${punkte(e.versickerung, STUFE)}</td>` +
-    `<td>${punkte(e.kuehlung, STUFE)}</td>` +
-    `<td>${punkte(e.aufwertung, STUFE)}</td>` +
-    `<td>${steckbrief(e)}</td>`;
+    WIRKUNGEN.map(w => `<td>${punkte(e[w.key], STUFE)}</td>`).join('') +
+    `<td>${steckbrief ? `<a class="steckbrief" href="${esc(steckbrief)}" target="_blank" rel="noopener">PDF öffnen</a>` : STRICH}</td>`;
   return tr;
 }
 
 // ------------------------------------------------------------------ Filtern
 
+const FILTERFELDER = ['zielgruppe', 'risiko', 'art', 'kosten'];
+
+function kaesten(feld) {
+  return [...document.querySelectorAll(`fieldset[data-feld="${feld}"] input`)];
+}
+
 function gewaehlt(feld) {
-  const kaesten = document.querySelectorAll(
-    `fieldset[data-feld="${feld}"] input:checked`);
-  return [...kaesten].map(k => k.value);
+  return kaesten(feld).filter(k => k.checked).map(k => k.value);
 }
 
 function passtRisiko(e, wahl) {
@@ -117,22 +211,20 @@ function passtRisiko(e, wahl) {
   });
 }
 
-function passtZielgruppe(e, wahl) {
-  return !wahl.length || wahl.some(w => e.akteure.includes(w));
+function suchbegriff() {
+  return document.getElementById('suchfeld').value.trim();
 }
 
 function gefiltert() {
-  const risiko = gewaehlt('risiko');
-  const art = gewaehlt('art');
-  const kosten = gewaehlt('kosten');
-  const ziel = gewaehlt('zielgruppe');
-  const suche = document.getElementById('suchfeld').value.trim().toLowerCase();
-
+  const risiko = gewaehlt('risiko'), art = gewaehlt('art');
+  const kosten = gewaehlt('kosten'), ziel = gewaehlt('zielgruppe');
+  const suche = suchbegriff().toLowerCase();
   return alle.filter(e =>
+    (!zustand.nurMerkliste || zustand.merkliste.has(e.id)) &&
     passtRisiko(e, risiko) &&
     (!art.length || art.includes(e.art)) &&
     (!kosten.length || kosten.includes(e.kosten)) &&
-    passtZielgruppe(e, ziel) &&
+    (!ziel.length || ziel.some(z => e.akteure.includes(z))) &&
     (!suche || e.name.toLowerCase().includes(suche)));
 }
 
@@ -148,14 +240,19 @@ function wegenLuecke() {
     (kosten.length && !e.kosten)).length;
 }
 
+function filterAnzahl() {
+  return FILTERFELDER.reduce((n, f) => n + gewaehlt(f).length, 0) + (suchbegriff() ? 1 : 0);
+}
+
 // ---------------------------------------------------------------- Sortieren
 
 function sortieren(liste) {
-  if (!sortierung.feld) return liste;
-  const f = sortierung.feld, richtung = sortierung.auf ? 1 : -1;
-  const zahlfeld = !['name', 'hazard', 'art', 'akteure'].includes(f);
+  const { feld, auf } = zustand.sortierung;
+  if (!feld) return liste;
+  const richtung = auf ? 1 : -1;
+  const zahlfeld = !['name', 'hazard', 'art', 'akteure'].includes(feld);
   return [...liste].sort((a, b) => {
-    let x = a[f], y = b[f];
+    const x = a[feld], y = b[feld];
     if (zahlfeld) {
       // Leere Felder immer ans Ende, in beide Richtungen -- sonst fuellt
       // sich die erste Bildschirmseite mit Strichen.
@@ -167,19 +264,164 @@ function sortieren(liste) {
   });
 }
 
+// --------------------------------------------------------------- Chips
+
+const RISIKO_TEXT = { 'Hitze+Starkregen': 'Hitze und Starkregen' };
+const KOSTEN_TEXT = { 1: '€ bis 20.000 €', 2: '€€ 20–100.000 €', 3: '€€€ über 100.000 €' };
+
+function chipText(feld, wert) {
+  if (feld === 'zielgruppe') return ZIELGRUPPE[wert];
+  if (feld === 'risiko') return RISIKO_TEXT[wert] || wert;
+  if (feld === 'kosten') return KOSTEN_TEXT[wert];
+  return wert;
+}
+
+function chipsZeichnen() {
+  const ziel = document.getElementById('chips');
+  const chips = [];
+  if (zustand.nurMerkliste) {
+    chips.push(`<button type="button" class="chip chip-merk" data-chip="merkliste">★ Nur Merkliste <span aria-hidden="true">✕</span></button>`);
+  }
+  for (const feld of FILTERFELDER) {
+    for (const wert of gewaehlt(feld)) {
+      chips.push(`<button type="button" class="chip" data-chip="${feld}" data-wert="${esc(wert)}"` +
+        ` aria-label="Filter ${esc(chipText(feld, wert))} entfernen">${esc(chipText(feld, wert))} <span aria-hidden="true">✕</span></button>`);
+    }
+  }
+  if (suchbegriff()) {
+    chips.push(`<button type="button" class="chip" data-chip="suche" aria-label="Suche entfernen">„${esc(suchbegriff())}“ <span aria-hidden="true">✕</span></button>`);
+  }
+  if (chips.length > 1) {
+    chips.push('<button type="button" class="knopf-schlicht" data-chip="alle">Alle entfernen</button>');
+  }
+  ziel.innerHTML = chips.join('');
+  ziel.hidden = !chips.length;
+}
+
+function chipEntfernen(knopf) {
+  const art = knopf.dataset.chip;
+  if (art === 'alle') { allesZuruecksetzen(); return; }
+  if (art === 'merkliste') merklisteVerlassen();
+  else if (art === 'suche') document.getElementById('suchfeld').value = '';
+  else kaesten(art).forEach(k => { if (k.value === knopf.dataset.wert) k.checked = false; });
+  zeichnen();
+}
+
+function allesZuruecksetzen() {
+  document.querySelectorAll('.filter input[type="checkbox"]').forEach(k => { k.checked = false; });
+  document.getElementById('suchfeld').value = '';
+  merklisteVerlassen();
+  zeichnen();
+}
+
+// --------------------------------------------------------- Adresse (Link)
+
+/** Die Auswahl steht in der Adresse, damit man sie als Link weitergeben
+ *  kann: „Das sind eure acht Massnahmen.“ */
+const PARAM = { zielgruppe: 'fuer', risiko: 'risiko', art: 'art', kosten: 'kosten' };
+
+function adresseSchreiben() {
+  const p = new URLSearchParams();
+  if (suchbegriff()) p.set('suche', suchbegriff());
+  for (const feld of FILTERFELDER) {
+    const w = gewaehlt(feld);
+    if (w.length) p.set(PARAM[feld], w.join(','));
+  }
+  if (zustand.sortierung.feld) {
+    p.set('sortierung', zustand.sortierung.feld + (zustand.sortierung.auf ? '' : '-ab'));
+  }
+  if (zustand.ansicht === 'tabelle') p.set('ansicht', 'tabelle');
+  if (zustand.nurMerkliste && zustand.merkliste.size) {
+    p.set('merkliste', [...zustand.merkliste].join(','));
+  }
+  const text = p.toString().replace(/%2C/g, ',');
+  history.replaceState(null, '', location.pathname + (text ? '?' + text : ''));
+}
+
+function adresseLesen() {
+  const p = new URLSearchParams(location.search);
+  document.getElementById('suchfeld').value = p.get('suche') || '';
+  for (const feld of FILTERFELDER) {
+    const werte = (p.get(PARAM[feld]) || '').split(',').filter(Boolean);
+    kaesten(feld).forEach(k => { k.checked = werte.includes(k.value); });
+  }
+  const s = p.get('sortierung');
+  if (s) {
+    const feld = s.replace(/-ab$/, '');
+    if (SPALTEN.includes(feld)) zustand.sortierung = { feld, auf: !s.endsWith('-ab') };
+  }
+  zustand.ansicht = p.get('ansicht') === 'tabelle' ? 'tabelle' : 'karten';
+  const merk = (p.get('merkliste') || '').split(',').filter(Boolean);
+  if (merk.length) {
+    zustand.merkliste = new Set(merk);
+    zustand.nurMerkliste = true;
+    zustand.merklisteAusLink = true;
+  }
+}
+
+// --------------------------------------------------------------- Merkliste
+
+const MERK_SCHLUESSEL = 'kare-merkliste';
+
+function merklisteLaden() {
+  try {
+    const roh = localStorage.getItem(MERK_SCHLUESSEL);
+    if (roh) zustand.merkliste = new Set(JSON.parse(roh));
+  } catch { /* privates Fenster o. ae.: dann eben ohne Gedaechtnis */ }
+}
+
+function merklisteSpeichern() {
+  zustand.merklisteAusLink = false;
+  try { localStorage.setItem(MERK_SCHLUESSEL, JSON.stringify([...zustand.merkliste])); } catch { /* egal */ }
+}
+
+/** „Nur Merkliste“ aus. Kam die Liste aus einem geteilten Link, gilt danach
+ *  wieder die eigene. */
+function merklisteVerlassen() {
+  zustand.nurMerkliste = false;
+  if (zustand.merklisteAusLink) {
+    zustand.merklisteAusLink = false;
+    zustand.merkliste = new Set();
+    merklisteLaden();
+  }
+}
+
+function merkenUmschalten(id) {
+  if (zustand.merkliste.has(id)) zustand.merkliste.delete(id);
+  else zustand.merkliste.add(id);
+  merklisteSpeichern();
+  if (zustand.nurMerkliste && !zustand.merkliste.size) zustand.nurMerkliste = false;
+  zeichnen();
+}
+
 // ----------------------------------------------------------------- Zeichnen
+
+function effektiveAnsicht() {
+  return SCHMAL.matches ? 'karten' : zustand.ansicht;
+}
 
 function zeichnen() {
   const treffer = sortieren(gefiltert());
-  const koerper = document.getElementById('koerper');
-  koerper.replaceChildren(...treffer.map(zeileBauen));
+  const karten = effektiveAnsicht() === 'karten';
 
+  const liste = document.getElementById('karten');
+  const tabelle = document.getElementById('tabelle-rahmen');
+  liste.hidden = !karten;
+  tabelle.hidden = karten;
+  if (karten) liste.replaceChildren(...treffer.map(karteBauen));
+  else document.getElementById('koerper').replaceChildren(...treffer.map(zeileBauen));
+
+  const n = treffer.length;
   document.getElementById('zaehler').textContent =
-    treffer.length === alle.length
-      ? `Alle ${alle.length} Maßnahmen`
-      : `${treffer.length} von ${alle.length} Maßnahmen`;
+    n === alle.length ? `Alle ${alle.length} Maßnahmen` : `${n} von ${alle.length} Maßnahmen`;
+  document.getElementById('filter-anwenden').textContent =
+    n === 1 ? '1 Maßnahme anzeigen' : `${n} Maßnahmen anzeigen`;
 
-  document.getElementById('leer').hidden = treffer.length > 0;
+  const leer = document.getElementById('leer');
+  leer.hidden = n > 0;
+  leer.textContent = zustand.nurMerkliste
+    ? 'Auf der Merkliste steht nichts, das zu diesen Filtern passt.'
+    : 'Zu dieser Auswahl gibt es keine Maßnahme. Nimm einen Filter heraus.';
 
   const luecken = wegenLuecke();
   const hinweis = document.getElementById('ausgeblendet');
@@ -190,26 +432,139 @@ function zeichnen() {
       `${luecken === 1 ? 'ist' : 'sind'} hier nicht dabei, weil die gefilterte ` +
       `Angabe dort fehlt — nicht, weil ${luecken === 1 ? 'sie nicht passt' : 'sie nicht passen'}.`;
   }
+
+  const anzahl = filterAnzahl();
+  const fa = document.getElementById('filter-anzahl');
+  fa.hidden = !anzahl;
+  fa.textContent = anzahl;
+
+  const merk = document.getElementById('merkliste-zeigen');
+  const ma = document.getElementById('merk-anzahl');
+  ma.hidden = !zustand.merkliste.size;
+  ma.textContent = zustand.merkliste.size;
+  merk.setAttribute('aria-pressed', zustand.nurMerkliste);
+  merk.disabled = !zustand.merkliste.size && !zustand.nurMerkliste;
+  merk.title = merk.disabled ? 'Mit ☆ an einer Maßnahme merken' : '';
+
+  document.getElementById('sortierung').value =
+    zustand.sortierung.feld && document.querySelector(`#sortierung option[value="${zustand.sortierung.feld}"]`)
+      ? zustand.sortierung.feld : '';
+  document.querySelectorAll('.umschalter button').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.ansicht === zustand.ansicht));
+  document.querySelectorAll('thead th').forEach(th => {
+    if (th.dataset.sort && th.dataset.sort === zustand.sortierung.feld)
+      th.setAttribute('aria-sort', zustand.sortierung.auf ? 'ascending' : 'descending');
+    else th.removeAttribute('aria-sort');
+  });
+
+  chipsZeichnen();
+  adresseSchreiben();
   hoeheMelden();
 }
 
-// ---------------------------------------------------------- Herunterladen
+// --------------------------------------------------- Filterfenster (Handy)
+
+let fokusVorher = null;
+
+function filterOeffnen() {
+  fokusVorher = document.activeElement;
+  document.body.classList.add('filter-offen');
+  document.getElementById('filter-abdeckung').hidden = false;
+  document.getElementById('filter-oeffnen').setAttribute('aria-expanded', 'true');
+  // Der Rest der Seite ist solange nicht bedienbar, auch nicht per Tastatur.
+  if (!document.documentElement.classList.contains('eingebettet-wachsend')) {
+    for (const s of ['.kopf', '.ergebnis', '.fuss']) document.querySelector(s).inert = true;
+    document.getElementById('filter').setAttribute('role', 'dialog');
+    document.getElementById('filter').setAttribute('aria-modal', 'true');
+  }
+  document.getElementById('filter-schliessen').focus();
+  hoeheMelden();
+}
+
+function filterSchliessen() {
+  if (!document.body.classList.contains('filter-offen')) return;
+  document.body.classList.remove('filter-offen');
+  document.getElementById('filter-abdeckung').hidden = true;
+  document.getElementById('filter-oeffnen').setAttribute('aria-expanded', 'false');
+  for (const s of ['.kopf', '.ergebnis', '.fuss']) document.querySelector(s).inert = false;
+  document.getElementById('filter').removeAttribute('role');
+  document.getElementById('filter').removeAttribute('aria-modal');
+  (fokusVorher || document.getElementById('filter-oeffnen')).focus();
+  hoeheMelden();
+}
+
+// ------------------------------------------------------------ Weitergeben
+
+function weitergebenStatus(inhalt) {
+  const s = document.getElementById('weitergeben-status');
+  s.replaceChildren(...(Array.isArray(inhalt) ? inhalt : [inhalt]));
+}
+
+async function linkKopieren() {
+  adresseSchreiben();
+  const link = location.href;
+  try {
+    await navigator.clipboard.writeText(link);
+    weitergebenStatus('Link kopiert. Wer ihn öffnet, sieht genau diese Auswahl.');
+  } catch {
+    // Etwa in einem iframe ohne Erlaubnis fuer die Zwischenablage: dann den
+    // Link zum Kopieren von Hand anbieten.
+    const feld = document.createElement('input');
+    feld.type = 'text';
+    feld.readOnly = true;
+    feld.value = link;
+    feld.className = 'link-feld';
+    feld.setAttribute('aria-label', 'Link zur Auswahl');
+    weitergebenStatus(['Link zum Kopieren: ', feld]);
+    feld.focus();
+    feld.select();
+  }
+}
+
+function druckkopfFuellen() {
+  const teile = [];
+  for (const feld of FILTERFELDER) {
+    const w = gewaehlt(feld);
+    if (w.length) teile.push(w.map(x => chipText(feld, x)).join(', '));
+  }
+  if (suchbegriff()) teile.push(`Suche „${suchbegriff()}“`);
+  if (zustand.nurMerkliste) teile.unshift('Merkliste');
+  const n = gefiltert().length;
+  document.getElementById('druck-auswahl').textContent =
+    `${n} Maßnahme${n === 1 ? '' : 'n'}` + (teile.length ? ` · Auswahl: ${teile.join(' · ')}` : ' · ohne Filter');
+  const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  document.getElementById('druck-stand').textContent = `Stand ${heute} · ${location.href}`;
+}
+
+// Im Ausdruck alle Bewertungen zeigen, danach wieder zuklappen wie vorher.
+let vorDruckOffen = [];
+window.addEventListener('beforeprint', () => {
+  druckkopfFuellen();
+  vorDruckOffen = [...document.querySelectorAll('details.alle-wirkungen')].map(d => d.open);
+  document.querySelectorAll('details.alle-wirkungen').forEach(d => { d.open = true; });
+});
+window.addEventListener('afterprint', () => {
+  document.querySelectorAll('details.alle-wirkungen').forEach((d, i) => { d.open = !!vorDruckOffen[i]; });
+});
 
 function alsCsv() {
   const treffer = sortieren(gefiltert());
   const kopf = ['Maßnahme', 'Hazard', 'Art', 'Akteure', 'Kosten', 'Umsetzungsdauer',
                 'Wirksamkeit - Rückhalt', 'Wirksamkeit - Ableitung',
                 'Wirksamkeit - Versickerung', 'Wirksamkeit - Kühlung',
-                'Aufwertung Stadtstruktur'];
-  const zeilen = [kopf].concat(treffer.map(e => SPALTEN.slice(0, 11).map(s => e[s])));
+                'Aufwertung Stadtstruktur', 'Steckbrief'];
+  const zeilen = [kopf].concat(treffer.map(e => SPALTEN.map(s =>
+    s === 'steckbrief' && steckbriefAdresse(e[s]) ? new URL(steckbriefAdresse(e[s]), location.href).href : e[s])));
   const klecks = new Blob([csvText(zeilen)], { type: 'text/csv;charset=utf-8' });
   const adresse = URL.createObjectURL(klecks);
   const a = document.createElement('a');
   const heute = new Date().toISOString().slice(0, 10);
   a.href = adresse;
   a.download = `${heute} Massnahmenauswahl.csv`;
+  document.body.append(a);
   a.click();
-  URL.revokeObjectURL(adresse);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(adresse), 1000);
 }
 
 // -------------------------------------------------------------------- Start
@@ -218,44 +573,63 @@ function verdrahten() {
   document.querySelectorAll('.filter input[type="checkbox"]')
     .forEach(k => k.addEventListener('change', zeichnen));
   document.getElementById('suchfeld').addEventListener('input', zeichnen);
-  document.getElementById('herunterladen').addEventListener('click', alsCsv);
+  document.getElementById('zuruecksetzen').addEventListener('click', allesZuruecksetzen);
 
-  document.getElementById('zuruecksetzen').addEventListener('click', () => {
-    document.querySelectorAll('.filter input[type="checkbox"]')
-      .forEach(k => { k.checked = false; });
-    document.getElementById('suchfeld').value = '';
-    zeichnen();
+  document.getElementById('filter-oeffnen').addEventListener('click', filterOeffnen);
+  document.getElementById('filter-schliessen').addEventListener('click', filterSchliessen);
+  document.getElementById('filter-anwenden').addEventListener('click', filterSchliessen);
+  document.getElementById('filter-abdeckung').addEventListener('click', filterSchliessen);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') filterSchliessen(); });
+  SCHMAL.addEventListener('change', () => { if (!SCHMAL.matches) filterSchliessen(); zeichnen(); });
+
+  document.getElementById('chips').addEventListener('click', e => {
+    const k = e.target.closest('[data-chip]');
+    if (k) chipEntfernen(k);
+  });
+  document.querySelector('.ergebnis').addEventListener('click', e => {
+    const k = e.target.closest('[data-merken]');
+    if (k) {
+      const id = k.dataset.merken;
+      merkenUmschalten(id);
+      // Fokus bleibt auf dem Stern, auch wenn die Liste neu gezeichnet wurde.
+      const neu = document.querySelector(`[data-merken="${CSS.escape(id)}"]`);
+      if (neu) neu.focus();
+    }
   });
 
+  document.getElementById('sortierung').addEventListener('change', e => {
+    const feld = e.target.value || null;
+    zustand.sortierung = { feld, auf: feld ? !!SORTIER_RICHTUNG[feld] : true };
+    zeichnen();
+  });
+  document.querySelectorAll('.umschalter button').forEach(b =>
+    b.addEventListener('click', () => { zustand.ansicht = b.dataset.ansicht; zeichnen(); }));
   document.querySelectorAll('thead th[data-sort]').forEach(th => {
-    th.addEventListener('click', () => {
+    th.tabIndex = 0;
+    const sortieren = () => {
       const feld = th.dataset.sort;
-      sortierung = { feld, auf: sortierung.feld === feld ? !sortierung.auf : true };
-      document.querySelectorAll('thead th').forEach(x => x.removeAttribute('aria-sort'));
-      th.setAttribute('aria-sort', sortierung.auf ? 'ascending' : 'descending');
+      zustand.sortierung = { feld, auf: zustand.sortierung.feld === feld ? !zustand.sortierung.auf : true };
       zeichnen();
-    });
+    };
+    th.addEventListener('click', sortieren);
+    th.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortieren(); } });
   });
-}
 
-async function starten() {
-  try {
-    const antwort = await fetch(DATEI);
-    if (!antwort.ok) throw new Error(`${antwort.status} ${antwort.statusText}`);
-    alle = einlesen(await antwort.text());
-    verdrahten();
+  document.getElementById('merkliste-zeigen').addEventListener('click', () => {
+    if (zustand.nurMerkliste) merklisteVerlassen();
+    else zustand.nurMerkliste = true;
     zeichnen();
-  } catch (fehler) {
-    document.getElementById('zaehler').textContent =
-      'Die Maßnahmen konnten nicht geladen werden: ' + fehler.message;
-  }
+  });
+  document.getElementById('teilen').addEventListener('click', linkKopieren);
+  document.getElementById('drucken').addEventListener('click', () => window.print());
+  document.getElementById('herunterladen').addEventListener('click', alsCsv);
 }
 
 /** Eingebettet als iframe: der umgebenden Seite die eigene Hoehe melden,
  *  damit der iframe mitwaechst statt eine zweite Bildlaufleiste zu zeigen.
  *  Die Hoehe ist keine vertrauliche Angabe, deshalb an jeden Empfaenger.
  *  Gemeldet wird nach jedem Zeichnen und zusaetzlich bei Groessenaenderung
- *  (Schrift geladen, Fenster schmaler, Hinweise auf- und zugeklappt). */
+ *  (Schrift geladen, Fenster schmaler, Bewertungen auf- und zugeklappt). */
 let zuletztGemeldet = 0;
 function hoeheMelden() {
   if (window.parent === window) return;
@@ -265,10 +639,39 @@ function hoeheMelden() {
   if (hoehe === zuletztGemeldet) return;
   zuletztGemeldet = hoehe;
   window.parent.postMessage({ typ: 'kare-hoehe', hoehe }, '*');
+  // Waechst der iframe tatsaechlich mit, liegt der untere Rand der Seite
+  // womoeglich weit ausserhalb des Bildschirms. Ein unten angeheftetes
+  // Filterfenster waere dann unsichtbar -- es klappt stattdessen an Ort und
+  // Stelle auf.
+  setTimeout(() => {
+    if (window.innerHeight >= hoehe - 4 && hoehe > 900) {
+      document.documentElement.classList.add('eingebettet-wachsend');
+    }
+  }, 400);
 }
 
 if (window.parent !== window) {
   new ResizeObserver(hoeheMelden).observe(document.body);
   window.addEventListener('load', hoeheMelden);
 }
+
+async function starten() {
+  merklisteLaden();
+  adresseLesen();
+  verdrahten();
+  try {
+    const antwort = await fetch(DATEI);
+    if (!antwort.ok) throw new Error(`${antwort.status} ${antwort.statusText}`);
+    alle = einlesen(await antwort.text());
+    // Was auf der Merkliste steht, aber nicht mehr in der Tabelle, faellt
+    // stillschweigend heraus -- sonst zaehlte der Knopf Unsichtbares mit.
+    const da = new Set(alle.map(e => e.id));
+    zustand.merkliste = new Set([...zustand.merkliste].filter(id => da.has(id)));
+    zeichnen();
+  } catch (fehler) {
+    document.getElementById('zaehler').textContent =
+      'Die Maßnahmen konnten nicht geladen werden: ' + fehler.message;
+  }
+}
+
 starten();

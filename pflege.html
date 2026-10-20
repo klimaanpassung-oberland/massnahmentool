@@ -103,6 +103,10 @@
     <div class="veroeffentlichen">
       <label for="nachricht">Beschreibung der Änderung</label>
       <input type="text" id="nachricht" maxlength="200">
+      <label class="bestaetigen" id="bestaetigen-zeile" hidden>
+        <input type="checkbox" id="bestaetigen">
+        <span id="bestaetigen-text"></span>
+      </label>
       <div class="knopfreihe">
         <button type="button" id="los" class="knopf" disabled>Veröffentlichen</button>
         <button type="button" id="csv-laden" class="knopf-zweit" disabled>Nur CSV herunterladen</button>
@@ -121,6 +125,18 @@
             <a id="link-upload-pdf" href="#" target="_blank" rel="noopener">steckbriefe/</a> hochladen.</li>
       </ol>
     </details>
+  </section>
+
+  <!-- 5 ---------------------------------------------------------------- -->
+  <section class="schritt" aria-labelledby="s5">
+    <h2 id="s5"><span class="nr" aria-hidden="true">↺</span> Frühere Stände</h2>
+    <p>Jede Veröffentlichung bleibt dauerhaft erhalten, auch wenn danach
+       versehentlich eine leere oder falsche Tabelle hochgeladen wurde.
+       Ein früherer Stand lässt sich als Excel herunterladen oder
+       wiederherstellen. Beim Wiederherstellen wird er in Schritt 4 geprüft und
+       verglichen und erst dann als neuer Stand veröffentlicht.</p>
+    <div id="verlauf"><p class="leise">Sichtbar nach dem Verbinden in Schritt 1.</p></div>
+    <p><button type="button" id="verlauf-mehr" class="knopf-schlicht" hidden>Ältere Stände anzeigen</button></p>
   </section>
 </main>
 

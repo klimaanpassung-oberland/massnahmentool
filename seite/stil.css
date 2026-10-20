@@ -12,6 +12,8 @@
   --flaeche: #ffffff;
   --grund: #f4f6f8;
   --punkt-leer: #cfd4da;
+  --hitze: #b4441f;
+  --hitze-hell: #fbe9e4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -26,6 +28,8 @@
     --flaeche: #181c22;
     --grund: #11141a;
     --punkt-leer: #3d444e;
+    --hitze: #f39a7e;
+    --hitze-hell: #3a2220;
   }
 }
 
@@ -79,36 +83,44 @@ body {
   margin: 0 auto;
   padding: 16px;
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 
+.unsichtbar { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.leise { color: var(--text-leise); }
+
 /* ---------- Filter ---------- */
+
+.filter-huelle { position: sticky; top: 16px; }
 
 .filter {
   background: var(--flaeche);
   border: 1px solid var(--linie);
   border-radius: 8px;
   padding: 14px;
-  position: sticky;
-  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
 .filter-kopf {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 10px;
 }
 .filter h2 { margin: 0; font-size: 1rem; }
 
+/* Nur im Filterfenster auf dem Handy */
+.knopf-zu, .filter-fuss, .filter-knopf, .filter-abdeckung { display: none; }
+
 .filter fieldset {
   border: 0;
   border-top: 1px solid var(--linie);
-  margin: 0;
+  margin: 12px 0 0;
   padding: 12px 0 0;
 }
-.filter fieldset + fieldset { margin-top: 12px; }
 .filter legend {
   font-weight: 600;
   font-size: .85rem;
@@ -117,18 +129,20 @@ body {
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: .03em;
+  float: left;
+  width: 100%;
 }
+.filter legend + * { clear: both; }
 .filter label {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 0;
+  padding: 4px 0;
   font-size: .92rem;
   cursor: pointer;
 }
-.filter input[type="checkbox"] { accent-color: var(--blau); width: 16px; height: 16px; }
+.filter input[type="checkbox"] { accent-color: var(--blau); width: 17px; height: 17px; flex-shrink: 0; }
 
-.suche { margin-top: 14px; border-top: 1px solid var(--linie); padding-top: 12px; }
 .suche label {
   display: block;
   font-weight: 600;
@@ -138,7 +152,7 @@ body {
   letter-spacing: .03em;
   margin-bottom: 6px;
 }
-.suche input {
+.suche input, #sortierung {
   width: 100%;
   padding: 7px 9px;
   border: 1px solid var(--linie);
@@ -164,6 +178,7 @@ body {
   font-size: .9rem;
 }
 .knopf:hover { background: var(--blau-tief); }
+.knopf-breit { width: 100%; padding: 11px 14px; font-size: 1rem; }
 .knopf-schlicht {
   background: none;
   border: 0;
@@ -172,25 +187,83 @@ body {
   padding: 2px 4px;
   text-decoration: underline;
 }
+.knopf-zweit {
+  font: inherit;
+  font-size: .9rem;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 7px 14px;
+  background: var(--flaeche);
+  color: var(--blau);
+  border: 1px solid var(--blau);
+}
+.knopf-zweit:hover:not(:disabled) { background: var(--blau-hell); }
+.knopf-zweit:disabled { opacity: .45; cursor: not-allowed; }
+.knopf-zweit[aria-pressed="true"] { background: var(--blau); color: #fff; }
+
+.anzahl {
+  display: inline-block;
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--blau);
+  color: #fff;
+  font-size: .78rem;
+  line-height: 20px;
+  text-align: center;
+  margin-left: 2px;
+}
+.anzahl[hidden] { display: none; }
+[aria-pressed="true"] .anzahl { background: #fff; color: var(--blau); }
+
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 
 /* ---------- Ergebnis ---------- */
 
-.ergebnis {
-  background: var(--flaeche);
-  border: 1px solid var(--linie);
-  border-radius: 8px;
-  padding: 14px;
-  min-width: 0;
-}
+.ergebnis { min-width: 0; }
 .ergebnis-kopf {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px 12px;
   flex-wrap: wrap;
   margin-bottom: 10px;
 }
 #zaehler { margin: 0; font-weight: 600; }
+.ansicht-wahl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#sortierung { width: auto; background: var(--flaeche); }
+
+.umschalter { display: inline-flex; border: 1px solid var(--blau); border-radius: 6px; overflow: hidden; }
+.umschalter button {
+  font: inherit;
+  font-size: .88rem;
+  padding: 6px 12px;
+  border: 0;
+  background: var(--flaeche);
+  color: var(--blau);
+  cursor: pointer;
+}
+.umschalter button + button { border-left: 1px solid var(--blau); }
+.umschalter button[aria-pressed="true"] { background: var(--blau); color: #fff; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px; }
+.chips[hidden] { display: none; }
+.chip {
+  font: inherit;
+  font-size: .85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  min-height: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--blau);
+  background: var(--blau-hell);
+  color: var(--blau-tief);
+  cursor: pointer;
+}
+.chip:hover { background: var(--flaeche); }
+.chip span { font-size: .8em; }
 
 .hinweis-luecke {
   margin: 0 0 10px;
@@ -202,7 +275,92 @@ body {
   color: var(--text-leise);
 }
 
-.tabelle-rahmen { overflow-x: auto; }
+/* ---------- Karten ---------- */
+
+.karten {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.karten[hidden] { display: none; }
+.karte article {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.karte-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.karte h3 { margin: 0; font-size: 1.02rem; line-height: 1.35; font-weight: 600; }
+.karte-marken { margin: 0; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: .82rem; }
+.karte-art { color: var(--text-leise); margin-left: 2px; }
+
+.merken {
+  flex-shrink: 0;
+  width: 36px; height: 36px;
+  margin: -6px -8px 0 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-leise);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.merken:hover { background: var(--blau-hell); color: var(--blau); }
+.merken[aria-pressed="true"] { color: var(--orange); }
+
+.fakten { margin: 0; display: grid; gap: 4px; font-size: .9rem; }
+.fakten > div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; align-items: baseline; }
+.fakten dt { color: var(--text-leise); font-size: .82rem; }
+.fakten dd { margin: 0; }
+.wirkungen { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.wirkung { white-space: nowrap; }
+.wirkung:not(:last-child)::after { content: ","; }
+.wirkung-name { font-weight: 500; }
+
+.alle-wirkungen { font-size: .86rem; margin-top: auto; padding-top: 4px; border-top: 1px solid var(--linie); }
+.alle-wirkungen summary { cursor: pointer; color: var(--blau); padding: 6px 0 2px; }
+.alle-wirkungen dl { margin: 6px 0 0; display: grid; gap: 4px; }
+.alle-wirkungen dl > div { display: flex; justify-content: space-between; gap: 10px; }
+.alle-wirkungen dt { font-weight: 500; }
+.alle-wirkungen dd { margin: 0; white-space: nowrap; }
+
+.steckbrief-knopf {
+  align-self: flex-start;
+  color: var(--blau);
+  font-size: .9rem;
+  font-weight: 500;
+}
+
+.marke {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--blau-hell);
+  color: var(--text-leise);
+  font-size: .8rem;
+  white-space: nowrap;
+}
+.marke-hitze { background: var(--hitze-hell); color: var(--hitze); font-weight: 500; }
+.marke-regen { background: var(--blau-hell); color: var(--blau-tief); font-weight: 500; }
+.marke-leer { background: none; border: 1px dashed var(--linie); }
+
+/* ---------- Tabelle ---------- */
+
+.tabelle-rahmen {
+  overflow-x: auto;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+}
+.tabelle-rahmen[hidden] { display: none; }
 
 table { border-collapse: collapse; width: 100%; font-size: .88rem; }
 
@@ -222,16 +380,18 @@ thead th {
   text-transform: uppercase;
   letter-spacing: .02em;
   white-space: nowrap;
-  cursor: pointer;
   user-select: none;
 }
-thead th:hover { color: var(--blau); }
+thead th[data-sort] { cursor: pointer; }
+thead th[data-sort]:hover { color: var(--blau); }
 thead th[aria-sort] { color: var(--blau); }
 thead th[aria-sort="ascending"]::after { content: " ▲"; font-size: .7em; }
 thead th[aria-sort="descending"]::after { content: " ▼"; font-size: .7em; }
 
 tbody tr:hover { background: var(--blau-hell); }
-td:first-child { font-weight: 500; min-width: 240px; }
+#tabelle td:nth-child(2) { font-weight: 500; min-width: 240px; }
+.spalte-merken { width: 40px; padding: 2px 0 2px 6px; }
+.spalte-merken .merken { margin: 0; }
 
 .fehlt { color: var(--punkt-leer); }
 
@@ -243,19 +403,34 @@ td:first-child { font-weight: 500; min-width: 240px; }
 
 .geld { white-space: nowrap; font-weight: 600; color: var(--blau); }
 
-.marke {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: 10px;
-  background: var(--blau-hell);
-  color: var(--text-leise);
-  font-size: .8rem;
-  white-space: nowrap;
-}
-
 a.steckbrief { color: var(--blau); }
 
 .leer { padding: 28px 10px; text-align: center; color: var(--text-leise); }
+
+/* ---------- Weitergeben ---------- */
+
+.weitergeben {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--linie);
+}
+.weitergeben-status { flex-basis: 100%; margin: 2px 0 0; font-size: .88rem; color: var(--text-leise); min-height: 1.3em; }
+.link-feld {
+  width: min(100%, 520px);
+  padding: 5px 8px;
+  border: 1px solid var(--linie);
+  border-radius: 6px;
+  background: var(--grund);
+  color: var(--text);
+  font: inherit;
+  font-size: .85rem;
+}
+
+.druckkopf { display: none; }
 
 /* ---------- Fuss ---------- */
 
@@ -415,6 +590,38 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
 .pdf-tabelle td[data-art="warnung"] { color: var(--warn); }
 .pdf-tabelle .zahl { white-space: nowrap; text-align: right; }
 
+.bestaetigen {
+  display: flex !important;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border-left: 3px solid var(--fehler);
+  background: var(--grund);
+  border-radius: 0 6px 6px 0;
+  font-weight: 500 !important;
+  color: var(--fehler);
+  cursor: pointer;
+}
+.bestaetigen[hidden] { display: none !important; }
+.bestaetigen input { accent-color: var(--fehler); width: 17px; height: 17px; margin-top: 3px; flex-shrink: 0; }
+
+.verlauf-rahmen { overflow-x: auto; }
+.verlauf-tabelle td { vertical-align: middle; }
+.verlauf-tabelle tr[data-art="leer"] td { color: var(--fehler); font-weight: 500; }
+.verlauf-tabelle .aktionen { white-space: nowrap; text-align: right; }
+.knopf-klein { padding: 3px 10px; font-size: .82rem; margin-left: 6px; }
+.marke-aktuell {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: var(--blau-hell);
+  color: var(--blau);
+  font-size: .75rem;
+  font-weight: 600;
+}
+
 .veroeffentlichen { border-top: 1px solid var(--linie); margin-top: 14px; padding-top: 12px; }
 .veroeffentlichen label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: 4px; }
 .veroeffentlichen input[type="text"] { width: 100%; }
@@ -423,14 +630,136 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
 /* ---------- Schmale Fenster ---------- */
 
 @media (max-width: 860px) {
-  .raster { grid-template-columns: 1fr; }
-  .filter { position: static; }
-  .kopf-inhalt { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .raster { grid-template-columns: 1fr; padding: 12px; }
+  /* Kopf knapp halten, damit auf dem Handy gleich Ergebnisse zu sehen sind. */
+  .kopf { padding: 10px 12px; }
+  .kopf-inhalt { flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
+  .kopf h1 { font-size: 1.2rem; }
+  .unterzeile { font-size: .8rem; }
   .logo { height: 60px; }
+
+  /* Ergebnisse zuerst; die Filter liegen hinter einem Knopf. Die Leiste
+     mit Filter und Sortierung bleibt beim Scrollen oben stehen. */
+  .ergebnis-kopf {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: -12px -12px 10px;
+    padding: 10px 12px;
+    background: var(--grund);
+    border-bottom: 1px solid var(--linie);
+  }
+  .filter-knopf { display: inline-flex; align-items: center; gap: 4px; }
+  #zaehler { order: 3; flex-basis: 100%; font-size: .92rem; }
+  .ansicht-wahl { flex: 1; justify-content: flex-end; }
+  #sortierung { max-width: 210px; }
+  .umschalter { display: none; }
+
+  .karten { grid-template-columns: 1fr; }
+  .chip, .knopf-zweit, .merken { min-height: 40px; }
+  .weitergeben .knopf-zweit { flex: 1 1 calc(50% - 8px); }
+
+  /* Filterfenster: von unten hereingeschoben, mit abgedunkeltem Rest. */
+  .filter-huelle { position: static; }
+  .filter-abdeckung {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgb(0 0 0 / .4);
+  }
+  .filter-abdeckung[hidden] { display: none; }
+  .filter {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 21;
+    max-height: 88vh;
+    border-radius: 14px 14px 0 0;
+    border-bottom: 0;
+    padding: 0 16px;
+    transform: translateY(105%);
+    transition: transform .22s ease-out;
+    visibility: hidden;
+  }
+  .filter-offen .filter { transform: none; visibility: visible; }
+  .filter-kopf {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--flaeche);
+    padding: 14px 0 8px;
+    margin: 0;
+    align-items: center;
+  }
+  .filter h2 { font-size: 1.1rem; margin-right: auto; }
+  .knopf-zu {
+    display: block;
+    width: 40px; height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--grund);
+    color: var(--text);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .filter label { padding: 8px 0; font-size: 1rem; }
+  .filter input[type="checkbox"] { width: 20px; height: 20px; }
+  .filter-fuss {
+    display: block;
+    position: sticky;
+    bottom: 0;
+    background: var(--flaeche);
+    padding: 12px 0 16px;
+    margin-top: 12px;
+    border-top: 1px solid var(--linie);
+  }
+  .filter-offen { overflow: hidden; }
+
+  /* In einem iframe, der mit dem Inhalt mitwaechst, laege „unten“ womoeglich
+     weit unter dem sichtbaren Bereich. Dort klappt der Filter an Ort und
+     Stelle auf statt als Fenster. */
+  .eingebettet-wachsend .ergebnis-kopf { position: static; }
+  .eingebettet-wachsend .filter-abdeckung { display: none; }
+  .eingebettet-wachsend .filter {
+    position: static;
+    transform: none;
+    transition: none;
+    border-radius: 8px;
+    border-bottom: 1px solid var(--linie);
+    max-height: none;
+    display: none;
+    visibility: visible;
+    margin-bottom: 12px;
+  }
+  .eingebettet-wachsend .filter-offen .filter { display: block; }
+  .eingebettet-wachsend .filter-offen { overflow: visible; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .filter { transition: none !important; }
+}
+
+/* ---------- Druck ---------- */
+
 @media print {
-  .filter, .knopf, .knopf-schlicht { display: none; }
-  .raster { display: block; }
-  body { background: #fff; }
+  @page { margin: 14mm 12mm; }
+  body { background: #fff; color: #000; font-size: 10.5pt; }
+  .filter-huelle, .ergebnis-kopf, .chips, .weitergeben, .merken, .spalte-merken,
+  .alle-wirkungen summary, .hinweis-luecke { display: none !important; }
+  .kopf { border-bottom: 2px solid #1a65ac; padding: 0 0 6px; }
+  .logo { height: 48px; background: none !important; padding: 0 !important; }
+  .druckkopf { display: block; margin: 8px 0 10px; font-size: 9pt; color: #444; }
+  .druckkopf p { margin: 0; overflow-wrap: anywhere; }
+  .raster { display: block; padding: 0; max-width: none; }
+  .karten { display: block; }
+  .karte { break-inside: avoid; margin-bottom: 8px; }
+  .karte article { border: 1px solid #bbb; padding: 8px 10px; gap: 4px; }
+  .alle-wirkungen { border-top: 1px dotted #bbb; }
+  .alle-wirkungen dl { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
+  .steckbrief-knopf::after { content: " – " attr(href); font-weight: 400; color: #444; font-size: 8.5pt; overflow-wrap: anywhere; }
+  .tabelle-rahmen { border: 0; overflow: visible; }
+  table { font-size: 8.5pt; }
+  thead th { position: static; }
+  .fuss { padding: 8px 0 0; break-inside: avoid; }
 }

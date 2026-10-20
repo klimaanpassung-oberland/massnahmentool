@@ -201,6 +201,7 @@ async function standLaden() {
   }
   if (zustand.neu) pruefen();
   zeichnen();
+  verlaufLaden();
 }
 
 // ------------------------------------------------------------ CSV <-> Daten
@@ -260,6 +261,9 @@ function spaltenZuordnen(kopfzeile) {
 // ----------------------------------------------------------------- Pruefen
 
 const AKTEURE = { K: 'Kommunen', U: 'Unternehmen', P: 'Haushalte' };
+
+// Ab so vielen wegfallenden Massnahmen fragt die Seite vor dem Veroeffentlichen nach.
+const BESTAETIGEN_AB = 3;
 
 /** Prueft und bereinigt einen Wert. Gibt { wert, fehler?, warnung? } zurueck. */
 function wertPruefen(feld, roh, link) {
@@ -361,6 +365,14 @@ function pruefen() {
   };
   ohne('hazard', 'Risiko');
   ohne('art', 'Art');
+
+  // Eine Tabelle ohne Massnahmen ist fast immer ein Versehen -- etwa das
+  // falsche Blatt oder eine leer gespeicherte Datei. Veroeffentlicht leerte
+  // sie die ganze Seite.
+  if (!eintraege.length && !meldungen.some(m => m.art === 'fehler')) {
+    melde('fehler', 'Die Tabelle enthält keine einzige Maßnahme. Ist das richtige Blatt ' +
+      'ausgewählt und die Datei gespeichert? Eine leere Tabelle wird nicht veröffentlicht.');
+  }
 
   neu.eintraege = eintraege;
   neu.meldungen = meldungen;
@@ -534,11 +546,26 @@ function zeichnen() {
 
   const tabelleOk = !zustand.neu || !!zustand.neu.csv;
   const etwasZuTun = csvGeaendert() || zustand.pdfs.size > 0;
-  $('los').disabled = !(zustand.verbunden && tabelleOk && etwasZuTun);
+
+  // Fallen mehrere Massnahmen weg, muss man das ausdruecklich wollen. Ein
+  // versehentlich gekuerzter Export soll nicht mit einem Klick durchgehen.
+  const weg = v ? v.entfernt.length : 0;
+  const mussBestaetigen = weg >= BESTAETIGEN_AB;
+  $('bestaetigen-zeile').hidden = !mussBestaetigen;
+  if (mussBestaetigen) {
+    $('bestaetigen-text').textContent =
+      `Ja, ${weg} Maßnahmen sollen von der Seite entfernt werden (siehe oben, rot).`;
+  } else {
+    $('bestaetigen').checked = false;
+  }
+  const bestaetigt = !mussBestaetigen || $('bestaetigen').checked;
+
+  $('los').disabled = !(zustand.verbunden && tabelleOk && etwasZuTun && bestaetigt);
   $('csv-laden').disabled = !(zustand.neu && zustand.neu.csv);
   $('los').title = !zustand.verbunden ? 'Erst in Schritt 1 verbinden'
     : !tabelleOk ? 'Erst die Fehler in der Tabelle beheben'
-    : !etwasZuTun ? 'Es gibt nichts Neues zu veröffentlichen' : '';
+    : !etwasZuTun ? 'Es gibt nichts Neues zu veröffentlichen'
+    : !bestaetigt ? 'Erst bestätigen, dass die Maßnahmen entfernt werden sollen' : '';
   if (!zustand.nachrichtVonHand) $('nachricht').value = nachrichtVorschlagen(v);
 }
 
@@ -551,6 +578,7 @@ async function tabelleAufnehmen(datei) {
     const roh = await tabelleLesen(datei);
     zustand.neu = { roh, datei: datei.name, blatt: roh.blatt };
     zustand.nachrichtVonHand = false;
+    $('bestaetigen').checked = false;
     pruefen();
     status('tabelle-status', `„${datei.name}“ gelesen — Ergebnis der Prüfung in Schritt 4.`, 'gut');
   } catch (f) {
@@ -597,10 +625,14 @@ function ablageEinrichten(id, eingabe, aufnehmen) {
 
 // --------------------------------------------------------------- Ausgaben
 
-function vorlageHerunterladen() {
-  if (!zustand.stand) return;
+/** Excel-Mappe zum Bearbeiten: der aktuelle Stand, oder ein frueherer aus
+ *  „Fruehere Staende“. */
+function vorlageHerunterladen(eintraege = zustand.stand && zustand.stand.eintraege,
+                              standText = `Heruntergeladen am ${heute()} von ${REPO_URL}`,
+                              dateiname = `${heute()} Massnahmen KARE.xlsx`) {
+  if (!eintraege) return;
   const kopf = FELDER.map(f => f.kopf);
-  const zeilen = zustand.stand.eintraege.map(e => FELDER.map(f =>
+  const zeilen = eintraege.map(e => FELDER.map(f =>
     f.typ === 'stufe' && e[f.key] !== '' ? Number(e[f.key]) : e[f.key]));
   const spalte = key => FELDER.findIndex(f => f.key === key);
   const auswahl = [
@@ -625,14 +657,116 @@ function vorlageHerunterladen() {
     ['Steckbrief', `Dateiname des PDF im Ordner ${ORDNER_PDF}/ (z. B. Gruendach.pdf, Groß-/Kleinschreibung beachten) oder ein vollständiger https-Link. Ein Excel-Hyperlink geht auch.`],
     ['', ''],
     ['Ablauf', 'Datei bearbeiten, speichern und auf der Pflegeseite (pflege.html) wieder hochladen. Dort wird geprüft und verglichen, bevor etwas veröffentlicht wird.'],
-    ['Stand', `Heruntergeladen am ${heute()} von ${REPO_URL}`],
+    ['Stand', standText],
   ];
   const klecks = Xlsx.schreiben([
     { name: 'Maßnahmen', zeilen: [kopf, ...zeilen], kopfzeile: true,
       breiten: FELDER.map(f => f.breite), auswahl },
     { name: 'Hinweise', zeilen: hinweise, kopfzeile: true, umbruch: true, breiten: [34, 100] },
   ]);
-  speichern(`${heute()} Massnahmen KARE.xlsx`, klecks);
+  speichern(dateiname, klecks);
+}
+
+// ---------------------------------------------------------- Fruehere Staende
+
+/** Jede Veroeffentlichung ist ein Commit; Git bewahrt alle auf. Hier werden
+ *  sie lesbar gemacht und lassen sich zurueckholen -- ohne dass jemand
+ *  wissen muss, was ein Commit ist. */
+const VERLAUF_JE_SEITE = 10;
+const verlauf = { eintraege: [], seite: 0, csv: new Map() };
+
+function datumText(iso) {
+  return new Date(iso).toLocaleString('de-DE', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+async function standVon(sha) {
+  if (!verlauf.csv.has(sha)) {
+    const laden = api(`contents/${PFAD_DATEN}?ref=${sha}`, { roh: true });
+    // Ein Fehlschlag soll beim naechsten Versuch neu laden, nicht haengen bleiben.
+    laden.catch(() => verlauf.csv.delete(sha));
+    verlauf.csv.set(sha, laden);
+  }
+  return verlauf.csv.get(sha);
+}
+
+async function verlaufLaden(weiter = false) {
+  if (!zustand.verbunden) return;
+  if (!weiter) { verlauf.eintraege = []; verlauf.seite = 0; }
+  verlauf.seite++;
+  try {
+    const liste = await api(`commits?path=${encodeURIComponent(PFAD_DATEN)}&sha=${ZWEIG}` +
+                            `&per_page=${VERLAUF_JE_SEITE}&page=${verlauf.seite}`);
+    const neu = await Promise.all(liste.map(async c => {
+      let anzahl = null;
+      try { anzahl = csvEinlesen(await standVon(c.sha)).length; } catch { /* bleibt offen */ }
+      return {
+        sha: c.sha,
+        datum: c.commit.author.date,
+        wer: (c.author && c.author.login) || c.commit.author.name,
+        was: c.commit.message.split('\n')[0],
+        anzahl,
+      };
+    }));
+    verlauf.eintraege.push(...neu);
+    $('verlauf-mehr').hidden = liste.length < VERLAUF_JE_SEITE;
+  } catch (f) {
+    $('verlauf').replaceChildren(el('p', { class: 'status', 'data-art': 'fehler' },
+      'Die früheren Stände konnten nicht geladen werden: ' + apiFehlerText(f)));
+    return;
+  }
+  verlaufZeichnen();
+}
+
+function verlaufZeichnen() {
+  const zeilen = verlauf.eintraege.map((v, i) => {
+    const aktuell = i === 0;
+    const leer = v.anzahl === 0;
+    return el('tr', { 'data-art': leer ? 'leer' : '' },
+      el('td', { class: 'zahl' }, datumText(v.datum)),
+      el('td', {}, v.wer),
+      el('td', {}, v.was, aktuell ? el('span', { class: 'marke-aktuell' }, 'aktuell') : null),
+      el('td', { class: 'zahl', title: leer ? 'leere Tabelle' : '' },
+        v.anzahl === null ? '?' : String(v.anzahl)),
+      el('td', { class: 'aktionen' },
+        el('button', { type: 'button', class: 'knopf-schlicht', onclick: () => alteExcel(v) }, 'Excel'),
+        aktuell ? null : el('button', { type: 'button', class: 'knopf-zweit knopf-klein',
+          onclick: () => wiederherstellen(v) }, 'Wiederherstellen')));
+  });
+  $('verlauf').replaceChildren(el('div', { class: 'verlauf-rahmen' },
+    el('table', { class: 'pdf-tabelle verlauf-tabelle' },
+      el('thead', {}, el('tr', {}, ['Veröffentlicht', 'von', 'Beschreibung', 'Maßnahmen', '']
+        .map(t => el('th', { scope: 'col' }, t)))),
+      el('tbody', {}, zeilen))));
+}
+
+async function alteExcel(v) {
+  const text = await standVon(v.sha);
+  const tag = v.datum.slice(0, 10);
+  vorlageHerunterladen(csvEinlesen(text),
+    `Früherer Stand vom ${datumText(v.datum)} (${v.sha.slice(0, 7)}), heruntergeladen am ${heute()}`,
+    `${heute()} Massnahmen KARE (Stand ${tag}).xlsx`);
+}
+
+/** Holt einen frueheren Stand in Schritt 4, als waere er hochgeladen worden:
+ *  gleiche Pruefung, gleicher Vergleich, und veroeffentlicht wird er als
+ *  neuer Stand. Der Verlauf dazwischen bleibt erhalten. */
+async function wiederherstellen(v) {
+  status('ergebnis', '');
+  try {
+    const text = await standVon(v.sha);
+    const roh = { blatt: null, zeilen: csvZerlegen(text).map((werte, i) => ({ nr: i + 1, werte, links: [] })) };
+    zustand.neu = { roh, datei: `Stand vom ${datumText(v.datum)}`, blatt: null };
+    pruefen();
+    $('bestaetigen').checked = false;
+    zustand.nachrichtVonHand = true;
+    $('nachricht').value = `Stand vom ${datumText(v.datum)} wiederhergestellt (${v.sha.slice(0, 7)})`;
+    status('tabelle-status', `Stand vom ${datumText(v.datum)} geladen — bitte in Schritt 4 prüfen und veröffentlichen.`, 'gut');
+    zeichnen();
+    $('s4').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (f) {
+    status('ergebnis', 'Der frühere Stand konnte nicht geladen werden: ' + apiFehlerText(f), 'fehler');
+  }
 }
 
 function csvHerunterladen() {
@@ -716,7 +850,9 @@ function starten() {
   $('merken').addEventListener('change', e => {
     try { if (!e.target.checked) sessionStorage.removeItem('kare-schluessel'); } catch { /* egal */ }
   });
-  $('vorlage').addEventListener('click', vorlageHerunterladen);
+  $('vorlage').addEventListener('click', () => vorlageHerunterladen());
+  $('bestaetigen').addEventListener('change', zeichnen);
+  $('verlauf-mehr').addEventListener('click', () => verlaufLaden(true));
   $('csv-laden').addEventListener('click', csvHerunterladen);
   $('los').addEventListener('click', veroeffentlichen);
   $('nachricht').addEventListener('input', () => { zustand.nachrichtVonHand = true; });

@@ -20,66 +20,106 @@
   </div>
 </header>
 
+<!-- Nur im Ausdruck: wofuer diese Liste steht und wo man sie wiederfindet. -->
+<div class="druckkopf" aria-hidden="true">
+  <p id="druck-auswahl"></p>
+  <p id="druck-stand"></p>
+</div>
+
 <main class="raster">
 
-  <aside class="filter" aria-label="Filter">
-    <div class="filter-kopf">
-      <h2>Filter</h2>
-      <button type="button" id="zuruecksetzen" class="knopf-schlicht">Zurücksetzen</button>
-    </div>
+  <div class="filter-huelle" id="filter-huelle">
+    <div class="filter-abdeckung" id="filter-abdeckung" hidden></div>
+    <aside class="filter" id="filter" aria-labelledby="filter-titel">
+      <div class="filter-kopf">
+        <h2 id="filter-titel">Filter</h2>
+        <button type="button" id="zuruecksetzen" class="knopf-schlicht">Alle zurücksetzen</button>
+        <button type="button" id="filter-schliessen" class="knopf-zu" aria-label="Filter schließen">×</button>
+      </div>
 
-    <fieldset data-feld="risiko">
-      <legend>Lokales Risiko</legend>
-      <label><input type="checkbox" value="Hitze"> Hitze</label>
-      <label><input type="checkbox" value="Starkregen"> Starkregen</label>
-      <label><input type="checkbox" value="Hitze+Starkregen"> Hitze und Starkregen</label>
-    </fieldset>
+      <div class="suche">
+        <label for="suchfeld">Suche</label>
+        <input type="search" id="suchfeld" placeholder="Maßnahme suchen …" autocomplete="off">
+      </div>
 
-    <fieldset data-feld="art">
-      <legend>Art der Maßnahme</legend>
-      <label><input type="checkbox" value="baulich"> baulich</label>
-      <label><input type="checkbox" value="planerisch"> planerisch</label>
-      <label><input type="checkbox" value="administrativ"> administrativ</label>
-      <label><input type="checkbox" value="Information"> Information</label>
-      <label><input type="checkbox" value="Anreizsystem"> Anreizsystem</label>
-    </fieldset>
+      <fieldset data-feld="zielgruppe">
+        <legend>Für wen</legend>
+        <label><input type="checkbox" value="K"> Kommunen</label>
+        <label><input type="checkbox" value="U"> Unternehmen</label>
+        <label><input type="checkbox" value="P"> Haushalte</label>
+      </fieldset>
 
-    <fieldset data-feld="kosten">
-      <legend>Investitionshöhe</legend>
-      <label><input type="checkbox" value="1"> € – bis 20.000 €</label>
-      <label><input type="checkbox" value="2"> €€ – 20.000 bis 100.000 €</label>
-      <label><input type="checkbox" value="3"> €€€ – über 100.000 €</label>
-    </fieldset>
+      <fieldset data-feld="risiko">
+        <legend>Lokales Risiko</legend>
+        <label><input type="checkbox" value="Hitze"> Hitze</label>
+        <label><input type="checkbox" value="Starkregen"> Starkregen</label>
+        <label><input type="checkbox" value="Hitze+Starkregen"> Hitze und Starkregen</label>
+      </fieldset>
 
-    <fieldset data-feld="zielgruppe">
-      <legend>Zielgruppe</legend>
-      <label><input type="checkbox" value="K"> Kommunen</label>
-      <label><input type="checkbox" value="U"> Unternehmen</label>
-      <label><input type="checkbox" value="P"> Haushalte</label>
-    </fieldset>
+      <fieldset data-feld="art">
+        <legend>Art der Maßnahme</legend>
+        <label><input type="checkbox" value="baulich"> baulich</label>
+        <label><input type="checkbox" value="planerisch"> planerisch</label>
+        <label><input type="checkbox" value="administrativ"> administrativ</label>
+        <label><input type="checkbox" value="Information"> Information</label>
+        <label><input type="checkbox" value="Anreizsystem"> Anreizsystem</label>
+      </fieldset>
 
-    <div class="suche">
-      <label for="suchfeld">Suche</label>
-      <input type="search" id="suchfeld" placeholder="Maßnahme suchen …" autocomplete="off">
-    </div>
-  </aside>
+      <fieldset data-feld="kosten">
+        <legend>Investitionshöhe</legend>
+        <label><input type="checkbox" value="1"> € – bis 20.000 €</label>
+        <label><input type="checkbox" value="2"> €€ – 20.000 bis 100.000 €</label>
+        <label><input type="checkbox" value="3"> €€€ – über 100.000 €</label>
+      </fieldset>
+
+      <div class="filter-fuss">
+        <button type="button" id="filter-anwenden" class="knopf knopf-breit">Maßnahmen anzeigen</button>
+      </div>
+    </aside>
+  </div>
 
   <section class="ergebnis" aria-label="Maßnahmen">
     <div class="ergebnis-kopf">
+      <button type="button" id="filter-oeffnen" class="knopf-zweit filter-knopf"
+              aria-controls="filter" aria-expanded="false">
+        Filter <span id="filter-anzahl" class="anzahl" hidden></span>
+      </button>
       <p id="zaehler" role="status">Maßnahmen werden geladen …</p>
-      <button type="button" id="herunterladen" class="knopf">Auswahl als CSV</button>
+      <div class="ansicht-wahl">
+        <label for="sortierung" class="unsichtbar">Sortieren</label>
+        <select id="sortierung">
+          <option value="">Reihenfolge: Standard</option>
+          <option value="name">Name A–Z</option>
+          <option value="kosten">Günstig zuerst</option>
+          <option value="dauer">Schnell umsetzbar zuerst</option>
+          <option value="rueckhalt">Größter Rückhalt zuerst</option>
+          <option value="ableitung">Beste Ableitung zuerst</option>
+          <option value="versickerung">Beste Versickerung zuerst</option>
+          <option value="kuehlung">Größte Kühlung zuerst</option>
+          <option value="aufwertung">Größte Aufwertung zuerst</option>
+        </select>
+        <div class="umschalter" role="group" aria-label="Ansicht">
+          <button type="button" data-ansicht="karten" aria-pressed="true">Karteikarten</button>
+          <button type="button" data-ansicht="tabelle" aria-pressed="false">Tabelle</button>
+        </div>
+      </div>
     </div>
+
+    <div id="chips" class="chips" aria-label="Aktive Filter"></div>
 
     <p id="ausgeblendet" class="hinweis-luecke" hidden></p>
 
-    <div class="tabelle-rahmen">
+    <ul id="karten" class="karten" aria-label="Maßnahmen als Karteikarten"></ul>
+
+    <div class="tabelle-rahmen" id="tabelle-rahmen" hidden>
       <table id="tabelle">
         <thead>
           <tr>
+            <th scope="col" class="spalte-merken"><span class="unsichtbar">Merken</span></th>
             <th scope="col" data-sort="name">Maßnahme</th>
             <th scope="col" data-sort="hazard">Risiko</th>
             <th scope="col" data-sort="art">Art</th>
-            <th scope="col" data-sort="akteure">Zielgruppe</th>
+            <th scope="col" data-sort="akteure">Für wen</th>
             <th scope="col" data-sort="kosten">Kosten</th>
             <th scope="col" data-sort="dauer">Dauer</th>
             <th scope="col" data-sort="rueckhalt">Rückhalt</th>
@@ -94,21 +134,30 @@
       </table>
     </div>
 
-    <p id="leer" class="leer" hidden>Zu dieser Auswahl gibt es keine Maßnahme.
-       Nimm einen Filter heraus.</p>
+    <p id="leer" class="leer" hidden></p>
+
+    <div class="weitergeben" aria-label="Auswahl weitergeben">
+      <button type="button" id="merkliste-zeigen" class="knopf-zweit" aria-pressed="false">
+        ☆ Merkliste <span id="merk-anzahl" class="anzahl" hidden></span>
+      </button>
+      <button type="button" id="teilen" class="knopf-zweit">Link zur Auswahl kopieren</button>
+      <button type="button" id="drucken" class="knopf-zweit">Drucken / PDF</button>
+      <button type="button" id="herunterladen" class="knopf-zweit">Als CSV</button>
+      <p id="weitergeben-status" class="weitergeben-status" role="status"></p>
+    </div>
   </section>
 </main>
 
 <footer class="fuss">
-  <h2>Hinweise zum Lesen der Tabelle</h2>
+  <h2>Hinweise zum Lesen</h2>
   <dl>
     <dt>Kosten</dt>
     <dd>€ bis 20.000 € · €€ 20.000 bis 100.000 € · €€€ über 100.000 €</dd>
     <dt>Umsetzungsdauer</dt>
     <dd>Nicht nur die Bauzeit: Es zählt auch, ob ein Genehmigungsverfahren
         nötig ist und vor allem, ob die Fläche verfügbar ist.</dd>
-    <dt>Wirksamkeit und Aufwertung</dt>
-    <dd>Drei Stufen von gering bis hoch. Ein Strich bedeutet, dass dazu
+    <dt>Wirkung</dt>
+    <dd>Drei Stufen von gering bis hoch. „Nicht bewertet“ heißt, dass dazu
         nichts hinterlegt ist — nicht, dass die Wirkung fehlt.</dd>
   </dl>
   <p class="warnung">Die Einschätzungen beruhen auf Expertenmeinungen. Je nach
