@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Maßnahmen pflegen</title>
+<link rel="stylesheet" href="seite/stil.css">
+</head>
+<body class="pflege">
+
+<header class="kopf">
+  <div class="kopf-inhalt">
+    <div>
+      <h1>Maßnahmen pflegen</h1>
+      <p class="unterzeile">Excel-Tabelle und Steckbriefe aktualisieren · <a href="index.html">zur Seite</a></p>
+    </div>
+    <img class="logo" src="seite/bilder/kare-logo.png" width="1000" height="381"
+         alt="KARE – Klimawandelanpassung in der Region Oberland">
+  </div>
+</header>
+
+<main class="pflege-inhalt">
+
+  <!-- 1 ---------------------------------------------------------------- -->
+  <section class="schritt" aria-labelledby="s1">
+    <h2 id="s1"><span class="nr">1</span> Mit GitHub verbinden</h2>
+    <p>Die Inhalte liegen im Repository
+       <a id="repo-link" href="#" target="_blank" rel="noopener">klimaanpassung-oberland/massnahmendatenbank</a>.
+       Zum Veröffentlichen braucht die Seite einen persönlichen Zugangsschlüssel.
+       Er bleibt in diesem Browser und geht nur an GitHub.</p>
+
+    <form id="verbinden" class="zeile-form" autocomplete="off">
+      <label for="schluessel" class="unsichtbar">Zugangsschlüssel</label>
+      <input type="password" id="schluessel" placeholder="github_pat_…" spellcheck="false">
+      <button type="submit" class="knopf">Verbinden</button>
+      <label class="haken"><input type="checkbox" id="merken"> bis zum Schließen des Tabs merken</label>
+    </form>
+    <p id="verbindung" class="status" role="status">Nicht verbunden.</p>
+
+    <details class="anleitung">
+      <summary>Wie bekomme ich einen Zugangsschlüssel?</summary>
+      <ol>
+        <li>Bei GitHub anmelden und
+            <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">einen neuen „Fine-grained token“ anlegen</a>.</li>
+        <li><b>Resource owner:</b> klimaanpassung-oberland.
+            <b>Repository access:</b> „Only select repositories“ → massnahmendatenbank.</li>
+        <li><b>Permissions → Repository permissions → Contents:</b> „Read and write“. Sonst nichts.</li>
+        <li>Ablaufdatum setzen (z. B. 90 Tage), erzeugen, den Schlüssel kopieren und oben einfügen.</li>
+      </ol>
+      <p>Verlangt die Organisation eine Freigabe für solche Schlüssel, muss ein
+         Organisations-Admin ihn einmal bestätigen.</p>
+    </details>
+  </section>
+
+  <!-- 2 ---------------------------------------------------------------- -->
+  <section class="schritt" aria-labelledby="s2">
+    <h2 id="s2"><span class="nr">2</span> Excel-Tabelle hochladen</h2>
+    <p>Am einfachsten: den aktuellen Stand als Excel herunterladen, darin
+       arbeiten und die Datei hier wieder hochladen.</p>
+    <p><button type="button" id="vorlage" class="knopf-zweit">Aktuellen Stand als Excel herunterladen</button></p>
+
+    <label class="ablage" id="ablage-tabelle">
+      <input type="file" id="datei-tabelle" accept=".xlsx,.csv">
+      <span><b>Excel-Datei hierher ziehen</b> oder klicken zum Auswählen<br>
+            <small>.xlsx, oder .csv mit Semikolon</small></span>
+    </label>
+    <p id="tabelle-status" class="status" role="status"></p>
+
+    <details class="anleitung">
+      <summary>Was in die Spalte „Steckbrief“ gehört</summary>
+      <ul>
+        <li><b>Ein Dateiname</b> wie <code>Gruendach.pdf</code> — die Datei liegt
+            dann im Repository im Ordner <code>steckbriefe/</code>
+            (in Schritt 3 hochladen). Groß- und Kleinschreibung zählt.</li>
+        <li><b>Oder ein vollständiger Link</b> wie
+            <code>https://www.energiewende-oberland.de/…/Gruendach.pdf</code>,
+            wenn die Datei woanders liegt.</li>
+        <li>Ein in Excel eingefügter Hyperlink geht auch: Dann zählt der Link,
+            nicht der angezeigte Text.</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- 3 ---------------------------------------------------------------- -->
+  <section class="schritt" aria-labelledby="s3">
+    <h2 id="s3"><span class="nr">3</span> Steckbriefe hochladen <small>(falls neue dabei sind)</small></h2>
+    <label class="ablage" id="ablage-pdf">
+      <input type="file" id="datei-pdf" accept=".pdf,application/pdf" multiple>
+      <span><b>PDF-Dateien hierher ziehen</b> oder klicken zum Auswählen<br>
+            <small>Der Dateiname muss so lauten wie in der Spalte „Steckbrief“.</small></span>
+    </label>
+    <div id="pdf-liste"></div>
+    <p id="pdf-bestand" class="status leise"></p>
+  </section>
+
+  <!-- 4 ---------------------------------------------------------------- -->
+  <section class="schritt" aria-labelledby="s4">
+    <h2 id="s4"><span class="nr">4</span> Prüfen und veröffentlichen</h2>
+    <div id="pruefung"><p class="leise">Noch keine Tabelle hochgeladen.</p></div>
+    <div id="aenderungen"></div>
+
+    <div class="veroeffentlichen">
+      <label for="nachricht">Beschreibung der Änderung</label>
+      <input type="text" id="nachricht" maxlength="200">
+      <div class="knopfreihe">
+        <button type="button" id="los" class="knopf" disabled>Veröffentlichen</button>
+        <button type="button" id="csv-laden" class="knopf-zweit" disabled>Nur CSV herunterladen</button>
+      </div>
+      <p id="ergebnis" class="status" role="status"></p>
+    </div>
+
+    <details class="anleitung">
+      <summary>Ohne Zugangsschlüssel veröffentlichen</summary>
+      <ol>
+        <li>Oben „Nur CSV herunterladen“ und die Datei in <code>massnahmen.csv</code> umbenennen.</li>
+        <li>Bei GitHub im Ordner
+            <a id="link-upload-daten" href="#" target="_blank" rel="noopener">daten/ → „Upload files“</a>
+            hochladen; die alte Datei wird ersetzt.</li>
+        <li>PDFs genauso im Ordner
+            <a id="link-upload-pdf" href="#" target="_blank" rel="noopener">steckbriefe/</a> hochladen.</li>
+      </ol>
+    </details>
+  </section>
+</main>
+
+<script src="seite/csv.js"></script>
+<script src="seite/xlsx.js"></script>
+<script src="seite/pflege.js"></script>
+</body>
+</html>
