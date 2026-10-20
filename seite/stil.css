@@ -404,6 +404,8 @@ tbody tr:hover { background: var(--blau-hell); }
   hyphens: manual;
   vertical-align: bottom;
   line-height: 1.25;
+  color: var(--text);
+  padding-bottom: 10px;
 }
 #tabelle thead th.gruppe {
   text-align: center;
