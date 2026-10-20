@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anpassungscoaching-Tool</title>
+<meta name="description" content="Maßnahmen zur Anpassung an Hitze und Starkregen für Kommunen, Unternehmen und Haushalte in der Region Oberland. Aus dem Projekt KARE.">
+<link rel="stylesheet" href="seite/stil.css">
+</head>
+<body>
+
+<header class="kopf">
+  <div class="kopf-inhalt">
+    <div>
+      <h1>Anpassungscoaching-Tool</h1>
+      <p class="unterzeile">Maßnahmen zur Anpassung an Hitze und Starkregen · Projekt KARE</p>
+    </div>
+    <img class="logo" src="seite/bilder/kare-logo.png" width="1000" height="381"
+         alt="KARE – Klimawandelanpassung in der Region Oberland">
+  </div>
+</header>
+
+<main class="raster">
+
+  <aside class="filter" aria-label="Filter">
+    <div class="filter-kopf">
+      <h2>Filter</h2>
+      <button type="button" id="zuruecksetzen" class="knopf-schlicht">Zurücksetzen</button>
+    </div>
+
+    <fieldset data-feld="risiko">
+      <legend>Lokales Risiko</legend>
+      <label><input type="checkbox" value="Hitze"> Hitze</label>
+      <label><input type="checkbox" value="Starkregen"> Starkregen</label>
+      <label><input type="checkbox" value="Hitze+Starkregen"> Hitze und Starkregen</label>
+    </fieldset>
+
+    <fieldset data-feld="art">
+      <legend>Art der Maßnahme</legend>
+      <label><input type="checkbox" value="baulich"> baulich</label>
+      <label><input type="checkbox" value="planerisch"> planerisch</label>
+      <label><input type="checkbox" value="administrativ"> administrativ</label>
+      <label><input type="checkbox" value="Information"> Information</label>
+      <label><input type="checkbox" value="Anreizsystem"> Anreizsystem</label>
+    </fieldset>
+
+    <fieldset data-feld="kosten">
+      <legend>Investitionshöhe</legend>
+      <label><input type="checkbox" value="1"> € – bis 20.000 €</label>
+      <label><input type="checkbox" value="2"> €€ – 20.000 bis 100.000 €</label>
+      <label><input type="checkbox" value="3"> €€€ – über 100.000 €</label>
+    </fieldset>
+
+    <fieldset data-feld="zielgruppe">
+      <legend>Zielgruppe</legend>
+      <label><input type="checkbox" value="K"> Kommunen</label>
+      <label><input type="checkbox" value="U"> Unternehmen</label>
+      <label><input type="checkbox" value="P"> Haushalte</label>
+    </fieldset>
+
+    <div class="suche">
+      <label for="suchfeld">Suche</label>
+      <input type="search" id="suchfeld" placeholder="Maßnahme suchen …" autocomplete="off">
+    </div>
+  </aside>
+
+  <section class="ergebnis" aria-label="Maßnahmen">
+    <div class="ergebnis-kopf">
+      <p id="zaehler" role="status">Maßnahmen werden geladen …</p>
+      <button type="button" id="herunterladen" class="knopf">Auswahl als CSV</button>
+    </div>
+
+    <p id="ausgeblendet" class="hinweis-luecke" hidden></p>
+
+    <div class="tabelle-rahmen">
+      <table id="tabelle">
+        <thead>
+          <tr>
+            <th scope="col" data-sort="name">Maßnahme</th>
+            <th scope="col" data-sort="hazard">Risiko</th>
+            <th scope="col" data-sort="art">Art</th>
+            <th scope="col" data-sort="akteure">Zielgruppe</th>
+            <th scope="col" data-sort="kosten">Kosten</th>
+            <th scope="col" data-sort="dauer">Dauer</th>
+            <th scope="col" data-sort="rueckhalt">Rückhalt</th>
+            <th scope="col" data-sort="ableitung">Ableitung</th>
+            <th scope="col" data-sort="versickerung">Versickerung</th>
+            <th scope="col" data-sort="kuehlung">Kühlung</th>
+            <th scope="col" data-sort="aufwertung">Stadtstruktur</th>
+            <th scope="col">Steckbrief</th>
+          </tr>
+        </thead>
+        <tbody id="koerper"></tbody>
+      </table>
+    </div>
+
+    <p id="leer" class="leer" hidden>Zu dieser Auswahl gibt es keine Maßnahme.
+       Nimm einen Filter heraus.</p>
+  </section>
+</main>
+
+<footer class="fuss">
+  <h2>Hinweise zum Lesen der Tabelle</h2>
+  <dl>
+    <dt>Kosten</dt>
+    <dd>€ bis 20.000 € · €€ 20.000 bis 100.000 € · €€€ über 100.000 €</dd>
+    <dt>Umsetzungsdauer</dt>
+    <dd>Nicht nur die Bauzeit: Es zählt auch, ob ein Genehmigungsverfahren
+        nötig ist und vor allem, ob die Fläche verfügbar ist.</dd>
+    <dt>Wirksamkeit und Aufwertung</dt>
+    <dd>Drei Stufen von gering bis hoch. Ein Strich bedeutet, dass dazu
+        nichts hinterlegt ist — nicht, dass die Wirkung fehlt.</dd>
+  </dl>
+  <p class="warnung">Die Einschätzungen beruhen auf Expertenmeinungen. Je nach
+     örtlichen Gegebenheiten kann es zu Abweichungen kommen.</p>
+</footer>
+
+<script src="seite/csv.js"></script>
+<script src="seite/app.js"></script>
+</body>
+</html>
