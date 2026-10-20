@@ -734,9 +734,7 @@ function alsCsv() {
 function kopfleisteMessen() {
   const wurzel = document.documentElement.style;
   wurzel.setProperty('--kopfleiste', document.querySelector('.ergebnis-kopf').offsetHeight + 'px');
-  // Der Seitenkopf haftet nur am Desktop (siehe stil.css).
-  const kopf = SCHMAL.matches ? 0 : document.querySelector('.kopf').offsetHeight;
-  wurzel.setProperty('--seitenkopf', kopf + 'px');
+  wurzel.setProperty('--seitenkopf', document.querySelector('.kopf').offsetHeight + 'px');
 }
 
 function verdrahten() {

@@ -239,12 +239,11 @@ body {
   padding: 8px 0;
 }
 
-/* Am Desktop bleibt auch der Seitenkopf stehen; Ergebnisleiste,
-   Tabellenkopf und Filterleiste haften darunter (--seitenkopf setzt app.js).
-   Auf dem Handy nicht: Dort koestete er ein Sechstel des Bildschirms. */
-@media (min-width: 861px) {
-  .kopf { position: sticky; top: 0; z-index: 10; }
-}
+/* Auch der Seitenkopf bleibt stehen; Ergebnisleiste, Tabellenkopf und
+   Filterleiste haften darunter (--seitenkopf setzt app.js). Nur auf der
+   oeffentlichen Seite, nicht auf der Pflegeseite. Auf dem Handy wird er
+   dafuer einzeilig (siehe „Schmale Fenster“). */
+body:not(.pflege) .kopf { position: sticky; top: 0; z-index: 10; }
 #zaehler { margin: 0; font-weight: 600; }
 .ansicht-wahl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 #sortierung { width: auto; background: var(--flaeche); }
@@ -379,6 +378,10 @@ body {
 .tabelle-rahmen[hidden] { display: none; }
 
 table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+/* Getrennte statt zusammengelegte Rahmen: Zusammengelegte zeichnet die
+   Tabelle selbst, und beim angehefteten Kopf blieben sie an ihrem alten
+   Platz -- im Kopf klaffte dann ein Spalt, durch den die Zeilen schienen. */
+#tabelle { border-collapse: separate; border-spacing: 0; }
 
 th, td {
   text-align: left;
@@ -442,7 +445,9 @@ tbody tr:hover { background: var(--blau-hell); }
   /* Mit border-collapse wandern die Linien nicht mit; ein Schatten schon.
      Die Rahmen selbst fallen weg -- durchsichtig liessen sie die Zeilen
      darunter durchscheinen. */
-  #tabelle thead th { box-shadow: inset 0 -2px 0 var(--linie); border-bottom: 0; }
+  #tabelle thead th,
+  #tabelle thead th.gruppe,
+  #tabelle thead tr:first-child th[rowspan] { box-shadow: inset 0 -2px 0 var(--linie); border-bottom: 0; }
   #tabelle thead th.gruppe { box-shadow: inset 0 -1px 0 var(--linie); }
 }
 #tabelle .mitte { text-align: center; }
@@ -909,12 +914,19 @@ body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visi
   .kopf h1 { font-size: 1.2rem; }
   .unterzeile { font-size: .8rem; }
   .logo { height: 60px; }
+  /* Oeffentliche Seite: Kopf haftet, also einzeilig und knapp. Die
+     Unterzeile entfaellt; was sie sagt, steht auch im Logo. */
+  body:not(.pflege) .kopf { padding: 6px 12px; }
+  body:not(.pflege) .kopf-inhalt { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
+  body:not(.pflege) .kopf h1 { font-size: 1.05rem; line-height: 1.25; }
+  body:not(.pflege) .unterzeile { display: none; }
+  body:not(.pflege) .logo { height: 54px; }
 
   /* Ergebnisse zuerst; die Leiste mit Filter und Sortierung bleibt beim
      Scrollen oben stehen. */
   .ergebnis-kopf {
     position: sticky;
-    top: 0;
+    top: var(--seitenkopf, 0px);
     z-index: 5;
     margin: -12px -12px 10px;
     padding: 10px 12px;
