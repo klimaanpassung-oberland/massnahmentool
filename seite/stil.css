@@ -95,14 +95,14 @@ body {
 
 /* ---------- Filter ---------- */
 
-.filter-huelle { position: sticky; top: 16px; }
+.filter-huelle { position: sticky; top: calc(var(--seitenkopf, 0px) + 16px); }
 
 .filter {
   background: var(--flaeche);
   border: 1px solid var(--linie);
   border-radius: 8px;
   padding: 14px;
-  max-height: calc(100vh - 32px);
+  max-height: calc(100vh - var(--seitenkopf, 0px) - 32px);
   overflow-y: auto;
 }
 .filter-kopf {
@@ -233,10 +233,17 @@ body {
   /* Bleibt beim Scrollen oben stehen; die Tabellenkoepfe rutschen darunter
      (--kopfleiste setzt app.js auf die Hoehe dieser Leiste). */
   position: sticky;
-  top: 0;
+  top: var(--seitenkopf, 0px);
   z-index: 5;
   background: var(--grund);
   padding: 8px 0;
+}
+
+/* Am Desktop bleibt auch der Seitenkopf stehen; Ergebnisleiste,
+   Tabellenkopf und Filterleiste haften darunter (--seitenkopf setzt app.js).
+   Auf dem Handy nicht: Dort koestete er ein Sechstel des Bildschirms. */
+@media (min-width: 861px) {
+  .kopf { position: sticky; top: 0; z-index: 10; }
 }
 #zaehler { margin: 0; font-weight: 600; }
 .ansicht-wahl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -426,17 +433,17 @@ tbody tr:hover { background: var(--blau-hell); }
    seitlich scrollt -- ab dieser Breite passt die Tabelle ganz hinein (sie
    braucht gut 930 px), darunter bleibt das seitliche Wischen. */
 @media (min-width: 1000px) {
-  .tabelle-rahmen { overflow: visible; }
+  /* clip statt hidden: schneidet die Ecken rund, ohne den Rahmen zu einem
+     Scrollbereich zu machen -- sonst haftete der Kopf nicht mehr. */
+  .tabelle-rahmen { overflow: visible; overflow: clip; }
   /* Eigener Hintergrund, damit beim Mitlaufen nichts von der Tabelle
      darunter durchscheint. */
-  #tabelle thead { position: sticky; top: var(--kopfleiste, 0px); z-index: 3; background: var(--flaeche); }
+  #tabelle thead { position: sticky; top: calc(var(--seitenkopf, 0px) + var(--kopfleiste, 0px)); z-index: 3; background: var(--flaeche); }
   /* Mit border-collapse wandern die Linien nicht mit; ein Schatten schon.
      Die Rahmen selbst fallen weg -- durchsichtig liessen sie die Zeilen
      darunter durchscheinen. */
   #tabelle thead th { box-shadow: inset 0 -2px 0 var(--linie); border-bottom: 0; }
   #tabelle thead th.gruppe { box-shadow: inset 0 -1px 0 var(--linie); }
-  #tabelle thead tr:first-child th:first-child { border-top-left-radius: 8px; }
-  #tabelle thead tr:first-child th:last-child { border-top-right-radius: 8px; }
 }
 #tabelle .mitte { text-align: center; }
 #tabelle td.spalte-name { font-weight: 500; width: 240px; min-width: 200px; hyphens: auto; }

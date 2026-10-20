@@ -732,12 +732,17 @@ function alsCsv() {
 /** Die Tabellenkoepfe haften unter der angehefteten Ergebnisleiste. Deren
  *  Hoehe aendert sich mit der Fensterbreite (Umbruch) und wird mitgefuehrt. */
 function kopfleisteMessen() {
-  const h = document.querySelector('.ergebnis-kopf').offsetHeight;
-  document.documentElement.style.setProperty('--kopfleiste', h + 'px');
+  const wurzel = document.documentElement.style;
+  wurzel.setProperty('--kopfleiste', document.querySelector('.ergebnis-kopf').offsetHeight + 'px');
+  // Der Seitenkopf haftet nur am Desktop (siehe stil.css).
+  const kopf = SCHMAL.matches ? 0 : document.querySelector('.kopf').offsetHeight;
+  wurzel.setProperty('--seitenkopf', kopf + 'px');
 }
 
 function verdrahten() {
-  new ResizeObserver(kopfleisteMessen).observe(document.querySelector('.ergebnis-kopf'));
+  const beobachter = new ResizeObserver(kopfleisteMessen);
+  beobachter.observe(document.querySelector('.ergebnis-kopf'));
+  beobachter.observe(document.querySelector('.kopf'));
   window.addEventListener('resize', kopfleisteMessen);
   document.querySelectorAll('.filter input[type="checkbox"]')
     .forEach(k => k.addEventListener('change', zeichnen));
