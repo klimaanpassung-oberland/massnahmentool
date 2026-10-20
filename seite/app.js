@@ -24,6 +24,19 @@ const WIRKUNGEN = [
   { key: 'aufwertung', name: 'Stadtstruktur', erklaerung: 'wertet Ort und Stadtbild auf' },
 ];
 
+// Am Desktop startet die Seite mit der Tabelle (auf dem Handy immer
+// Karteikarten). Wer umschaltet, behaelt die Wahl auf diesem Geraet.
+const STANDARD_ANSICHT = 'tabelle';
+const ANSICHT_SCHLUESSEL = 'kare-ansicht';
+
+function gemerkteAnsicht() {
+  try {
+    const a = localStorage.getItem(ANSICHT_SCHLUESSEL);
+    if (a === 'karten' || a === 'tabelle') return a;
+  } catch { /* egal */ }
+  return STANDARD_ANSICHT;
+}
+
 // Wie die Auswahl „Sortieren“ ordnet: Kosten und Dauer niedrig zuerst,
 // Wirkungen hoch zuerst.
 const SORTIER_RICHTUNG = { name: true, kosten: true, dauer: true, hazard: true, art: true, akteure: true };
@@ -35,7 +48,7 @@ const BREIT = window.matchMedia('(min-width: 1300px)');
 
 const zustand = {
   sortierung: { feld: null, auf: true },
-  ansicht: 'karten',
+  ansicht: 'tabelle',
   merkliste: new Set(),
   nurMerkliste: false,
   // Kam die Merkliste aus einem geteilten Link, wird sie erst gespeichert,
@@ -347,7 +360,7 @@ function adresseSchreiben() {
   if (zustand.sortierung.feld) {
     p.set('sortierung', zustand.sortierung.feld + (zustand.sortierung.auf ? '' : '-ab'));
   }
-  if (zustand.ansicht === 'tabelle') p.set('ansicht', 'tabelle');
+  if (zustand.ansicht !== STANDARD_ANSICHT) p.set('ansicht', zustand.ansicht);
   if (zustand.vergleich && zustand.merkliste.size) {
     p.set('vergleich', [...zustand.merkliste].join(','));
   } else if (zustand.nurMerkliste && zustand.merkliste.size) {
@@ -369,7 +382,10 @@ function adresseLesen() {
     const feld = s.replace(/-ab$/, '');
     if (SPALTEN.includes(feld)) zustand.sortierung = { feld, auf: !s.endsWith('-ab') };
   }
-  zustand.ansicht = p.get('ansicht') === 'tabelle' ? 'tabelle' : 'karten';
+  // Adresse vor eigener Gewohnheit vor Standard. Alte Links mit
+  // ?ansicht=tabelle funktionieren weiter.
+  const ansicht = p.get('ansicht');
+  zustand.ansicht = ansicht === 'tabelle' || ansicht === 'karten' ? ansicht : gemerkteAnsicht();
   const vgl = (p.get('vergleich') || '').split(',').filter(Boolean);
   const merk = (p.get('merkliste') || '').split(',').filter(Boolean);
   if (vgl.length) {
@@ -757,7 +773,11 @@ function verdrahten() {
     zeichnen();
   });
   document.querySelectorAll('.umschalter button').forEach(b =>
-    b.addEventListener('click', () => { zustand.ansicht = b.dataset.ansicht; zeichnen(); }));
+    b.addEventListener('click', () => {
+      zustand.ansicht = b.dataset.ansicht;
+      try { localStorage.setItem(ANSICHT_SCHLUESSEL, zustand.ansicht); } catch { /* egal */ }
+      zeichnen();
+    }));
   document.querySelectorAll('thead th[data-sort]').forEach(th => {
     th.tabIndex = 0;
     const sortieren = () => {
