@@ -297,7 +297,7 @@ body {
   padding: 14px 16px;
 }
 .karte-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-.karte h3 { margin: 0; font-size: 1.02rem; line-height: 1.35; font-weight: 600; }
+.karte h3 { margin: 0; font-size: 1.02rem; line-height: 1.35; font-weight: 600; hyphens: auto; }
 .karte-marken { margin: 0; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: .82rem; }
 .karte-art { color: var(--text-leise); margin-left: 2px; }
 
@@ -371,8 +371,6 @@ th, td {
   vertical-align: top;
 }
 thead th {
-  position: sticky;
-  top: 0;
   background: var(--flaeche);
   border-bottom: 2px solid var(--linie);
   font-size: .8rem;
@@ -389,9 +387,37 @@ thead th[aria-sort="ascending"]::after { content: " ▲"; font-size: .7em; }
 thead th[aria-sort="descending"]::after { content: " ▼"; font-size: .7em; }
 
 tbody tr:hover { background: var(--blau-hell); }
-#tabelle td:nth-child(2) { font-weight: 500; min-width: 240px; }
-.spalte-merken { width: 40px; padding: 2px 0 2px 6px; }
-.spalte-merken .merken { margin: 0; }
+
+/* Die Massnahmentabelle ist kompakt gesetzt, damit alle 13 Spalten ohne
+   seitliches Wischen auf einen Bildschirm passen: Name bricht um,
+   Ueberschriften duerfen trennen, Marken stehen untereinander. */
+#tabelle { font-size: .84rem; }
+#tabelle th, #tabelle td { padding: 6px 6px; }
+#tabelle thead th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: .78rem;
+  font-weight: 600;
+  white-space: normal;
+  hyphens: manual;
+  vertical-align: bottom;
+  line-height: 1.25;
+}
+#tabelle thead th.gruppe {
+  text-align: center;
+  border-bottom: 1px solid var(--linie);
+  color: var(--text);
+  vertical-align: middle;
+}
+#tabelle thead tr:first-child th[rowspan] { border-bottom-width: 2px; }
+#tabelle .mitte { text-align: center; }
+#tabelle td.spalte-name { font-weight: 500; width: 240px; min-width: 200px; hyphens: auto; }
+#tabelle td { vertical-align: middle; }
+.zellmarken { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+#tabelle .marke { font-size: .74rem; padding: 0 6px; }
+#tabelle .punkte { letter-spacing: 0; font-size: .82rem; }
+.spalte-merken { width: 36px; padding: 2px 0 2px 4px !important; }
+.spalte-merken .merken { margin: 0; width: 32px; height: 32px; font-size: 1.15rem; }
 
 .fehlt { color: var(--punkt-leer); }
 
@@ -628,10 +654,106 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
 .veroeffentlichen input[type="text"] { width: 100%; }
 .knopfreihe { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
 
+/* ---------- Filter als Fenster ----------
+   Auf dem Handy immer, am Desktop in der Tabellenansicht, solange die
+   Tabelle neben der Leiste nicht Platz haette (siehe filterModusSetzen in
+   app.js). Auf dem Handy kommt das Fenster von unten, am Desktop von links. */
+
+.filter-als-fenster .raster { grid-template-columns: minmax(0, 1fr); }
+.filter-als-fenster .filter-knopf { display: inline-flex; align-items: center; gap: 4px; }
+.filter-als-fenster .filter-huelle { position: static; }
+.filter-als-fenster .filter-abdeckung {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgb(0 0 0 / .4);
+}
+.filter-als-fenster .filter-abdeckung[hidden] { display: none; }
+.filter-als-fenster .filter {
+  position: fixed;
+  z-index: 21;
+  padding: 0 16px;
+  transition: transform .22s ease-out;
+  visibility: hidden;
+}
+.filter-als-fenster .filter-kopf {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--flaeche);
+  padding: 14px 0 8px;
+  margin: 0;
+  align-items: center;
+}
+.filter-als-fenster .filter h2 { font-size: 1.1rem; margin-right: auto; }
+.filter-als-fenster .knopf-zu {
+  display: block;
+  width: 40px; height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--grund);
+  color: var(--text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.filter-als-fenster .filter-fuss {
+  display: block;
+  position: sticky;
+  bottom: 0;
+  background: var(--flaeche);
+  padding: 12px 0 16px;
+  margin-top: 12px;
+  border-top: 1px solid var(--linie);
+}
+.filter-als-fenster.filter-offen { overflow: hidden; }
+
+/* Handy: von unten */
+.filter-als-fenster:not(.filter-seitlich) .filter {
+  left: 0; right: 0; bottom: 0;
+  max-height: 88vh;
+  border-radius: 14px 14px 0 0;
+  border-bottom: 0;
+  transform: translateY(105%);
+}
+/* Desktop: von links */
+.filter-seitlich .filter {
+  top: 0; bottom: 0; left: 0;
+  width: min(340px, 90vw);
+  max-height: none;
+  border-radius: 0 12px 12px 0;
+  border-left: 0;
+  transform: translateX(-105%);
+}
+
+/* Offen -- nach den beiden Varianten und mit Vorrang vor ihnen. */
+body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visible; }
+
+/* In einem iframe, der mit dem Inhalt mitwaechst, laege das Fenster
+   womoeglich weit ausserhalb des sichtbaren Bereichs. Dort klappt der Filter
+   an Ort und Stelle auf. */
+.eingebettet-wachsend .filter-als-fenster .ergebnis-kopf { position: static; }
+.eingebettet-wachsend .filter-als-fenster .filter-abdeckung { display: none; }
+.eingebettet-wachsend .filter-als-fenster .filter {
+  position: static;
+  width: auto;
+  transform: none;
+  transition: none;
+  border-radius: 8px;
+  border: 1px solid var(--linie);
+  max-height: none;
+  display: none;
+  visibility: visible;
+  margin-bottom: 12px;
+}
+.eingebettet-wachsend .filter-als-fenster.filter-offen .filter { display: block; }
+.eingebettet-wachsend .filter-als-fenster.filter-offen { overflow: visible; }
+
 /* ---------- Schmale Fenster ---------- */
 
 @media (max-width: 860px) {
-  .raster { grid-template-columns: 1fr; padding: 12px; }
+  .raster { padding: 12px; }
   /* Kopf knapp halten, damit auf dem Handy gleich Ergebnisse zu sehen sind. */
   .kopf { padding: 10px 12px; }
   .kopf-inhalt { flex-direction: column-reverse; align-items: flex-start; gap: 6px; }
@@ -639,8 +761,8 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
   .unterzeile { font-size: .8rem; }
   .logo { height: 60px; }
 
-  /* Ergebnisse zuerst; die Filter liegen hinter einem Knopf. Die Leiste
-     mit Filter und Sortierung bleibt beim Scrollen oben stehen. */
+  /* Ergebnisse zuerst; die Leiste mit Filter und Sortierung bleibt beim
+     Scrollen oben stehen. */
   .ergebnis-kopf {
     position: sticky;
     top: 0;
@@ -650,7 +772,6 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
     background: var(--grund);
     border-bottom: 1px solid var(--linie);
   }
-  .filter-knopf { display: inline-flex; align-items: center; gap: 4px; }
   #zaehler { order: 3; flex-basis: 100%; font-size: .92rem; }
   .ansicht-wahl { flex: 1; justify-content: flex-end; }
   #sortierung { max-width: 210px; }
@@ -659,82 +780,8 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
   .karten { grid-template-columns: 1fr; }
   .chip, .knopf-zweit, .merken { min-height: 40px; }
   .weitergeben .knopf-zweit { flex: 1 1 calc(50% - 8px); }
-
-  /* Filterfenster: von unten hereingeschoben, mit abgedunkeltem Rest. */
-  .filter-huelle { position: static; }
-  .filter-abdeckung {
-    display: block;
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    background: rgb(0 0 0 / .4);
-  }
-  .filter-abdeckung[hidden] { display: none; }
-  .filter {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 21;
-    max-height: 88vh;
-    border-radius: 14px 14px 0 0;
-    border-bottom: 0;
-    padding: 0 16px;
-    transform: translateY(105%);
-    transition: transform .22s ease-out;
-    visibility: hidden;
-  }
-  .filter-offen .filter { transform: none; visibility: visible; }
-  .filter-kopf {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: var(--flaeche);
-    padding: 14px 0 8px;
-    margin: 0;
-    align-items: center;
-  }
-  .filter h2 { font-size: 1.1rem; margin-right: auto; }
-  .knopf-zu {
-    display: block;
-    width: 40px; height: 40px;
-    border: 0;
-    border-radius: 50%;
-    background: var(--grund);
-    color: var(--text);
-    font-size: 1.5rem;
-    line-height: 1;
-    cursor: pointer;
-  }
   .filter label { padding: 8px 0; font-size: 1rem; }
   .filter input[type="checkbox"] { width: 20px; height: 20px; }
-  .filter-fuss {
-    display: block;
-    position: sticky;
-    bottom: 0;
-    background: var(--flaeche);
-    padding: 12px 0 16px;
-    margin-top: 12px;
-    border-top: 1px solid var(--linie);
-  }
-  .filter-offen { overflow: hidden; }
-
-  /* In einem iframe, der mit dem Inhalt mitwaechst, laege „unten“ womoeglich
-     weit unter dem sichtbaren Bereich. Dort klappt der Filter an Ort und
-     Stelle auf statt als Fenster. */
-  .eingebettet-wachsend .ergebnis-kopf { position: static; }
-  .eingebettet-wachsend .filter-abdeckung { display: none; }
-  .eingebettet-wachsend .filter {
-    position: static;
-    transform: none;
-    transition: none;
-    border-radius: 8px;
-    border-bottom: 1px solid var(--linie);
-    max-height: none;
-    display: none;
-    visibility: visible;
-    margin-bottom: 12px;
-  }
-  .eingebettet-wachsend .filter-offen .filter { display: block; }
-  .eingebettet-wachsend .filter-offen { overflow: visible; }
 }
 
 @media (prefers-reduced-motion: reduce) {

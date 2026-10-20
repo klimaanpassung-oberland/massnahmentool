@@ -30,6 +30,8 @@ const SORTIER_RICHTUNG = { name: true, kosten: true, dauer: true, hazard: true, 
 
 // Schmal = Handy. Gleiche Grenze wie in stil.css.
 const SCHMAL = window.matchMedia('(max-width: 860px)');
+// Ab dieser Breite passt die Tabelle neben die Filterleiste.
+const BREIT = window.matchMedia('(min-width: 1300px)');
 
 const zustand = {
   sortierung: { feld: null, auf: true },
@@ -74,6 +76,12 @@ function esc(wert) {
 }
 
 const STRICH = '<span class="fehlt" title="keine Angabe">–</span>';
+
+/** Name zum Anzeigen: nach einem Schraegstrich darf umbrochen werden, sonst
+ *  sprengt etwa „Kaltluftentstehungsgebieten/Frischluftschneisen“ die Spalte. */
+function nameHtml(name) {
+  return esc(name).replace(/\//g, '/<wbr>');
+}
 
 function punkte(wert, beschriftung) {
   const n = parseInt(wert, 10);
@@ -150,7 +158,7 @@ function karteBauen(e) {
   li.innerHTML =
     `<article aria-labelledby="k-${esc(e.id)}">` +
       `<div class="karte-kopf">` +
-        `<h3 id="k-${esc(e.id)}">${esc(e.name)}</h3>${merkKnopf(e)}` +
+        `<h3 id="k-${esc(e.id)}">${nameHtml(e.name)}</h3>${merkKnopf(e)}` +
       `</div>` +
       `<p class="karte-marken">${risikoMarken(e.hazard)}` +
         (e.art ? ` <span class="karte-art">${esc(e.art)}</span>` : '') + `</p>` +
@@ -174,19 +182,25 @@ function karteBauen(e) {
   return li;
 }
 
+/** Kompakte Zeile: Name darf umbrechen, Risiko und Zielgruppe stehen als
+ *  kleine Marken untereinander -- so passen alle Spalten auf einen Bildschirm. */
 function zeileBauen(e) {
   const tr = document.createElement('tr');
   const steckbrief = steckbriefAdresse(e.steckbrief);
+  const risiko = e.hazard ? `<div class="zellmarken">${risikoMarken(e.hazard)}</div>` : STRICH;
+  const fuer = e.akteure
+    ? `<div class="zellmarken">${zielgruppen(e.akteure).map(z => `<span class="marke">${esc(z)}</span>`).join('')}</div>`
+    : STRICH;
   tr.innerHTML =
     `<td class="spalte-merken">${merkKnopf(e)}</td>` +
-    `<td>${esc(e.name)}</td>` +
-    `<td>${textOderStrich(e.hazard)}</td>` +
+    `<td class="spalte-name">${nameHtml(e.name)}</td>` +
+    `<td>${risiko}</td>` +
     `<td>${textOderStrich(e.art)}</td>` +
-    `<td>${e.akteure ? zielgruppen(e.akteure).map(z => `<span class="marke">${esc(z)}</span>`).join(' ') : STRICH}</td>` +
-    `<td>${geld(e.kosten)}</td>` +
-    `<td>${punkte(e.dauer, DAUER)}</td>` +
-    WIRKUNGEN.map(w => `<td>${punkte(e[w.key], STUFE)}</td>`).join('') +
-    `<td>${steckbrief ? `<a class="steckbrief" href="${esc(steckbrief)}" target="_blank" rel="noopener">PDF öffnen</a>` : STRICH}</td>`;
+    `<td>${fuer}</td>` +
+    `<td class="mitte">${geld(e.kosten)}</td>` +
+    `<td class="mitte">${punkte(e.dauer, DAUER)}</td>` +
+    WIRKUNGEN.map(w => `<td class="mitte">${punkte(e[w.key], STUFE)}</td>`).join('') +
+    `<td class="mitte">${steckbrief ? `<a class="steckbrief" href="${esc(steckbrief)}" target="_blank" rel="noopener" aria-label="Steckbrief ${esc(e.name)} (PDF)">PDF</a>` : STRICH}</td>`;
   return tr;
 }
 
@@ -400,9 +414,20 @@ function effektiveAnsicht() {
   return SCHMAL.matches ? 'karten' : zustand.ansicht;
 }
 
+/** Die Filter liegen hinter einem Knopf: auf dem Handy immer (Fenster von
+ *  unten), am Desktop in der Tabellenansicht, wenn die Tabelle sonst nicht
+ *  auf den Bildschirm passt (Leiste von links). */
+function filterModusSetzen() {
+  const fenster = SCHMAL.matches || (effektiveAnsicht() === 'tabelle' && !BREIT.matches);
+  document.body.classList.toggle('filter-als-fenster', fenster);
+  document.body.classList.toggle('filter-seitlich', fenster && !SCHMAL.matches);
+  if (!fenster) filterSchliessen();
+}
+
 function zeichnen() {
   const treffer = sortieren(gefiltert());
   const karten = effektiveAnsicht() === 'karten';
+  filterModusSetzen();
 
   const liste = document.getElementById('karten');
   const tabelle = document.getElementById('tabelle-rahmen');
@@ -580,7 +605,8 @@ function verdrahten() {
   document.getElementById('filter-anwenden').addEventListener('click', filterSchliessen);
   document.getElementById('filter-abdeckung').addEventListener('click', filterSchliessen);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') filterSchliessen(); });
-  SCHMAL.addEventListener('change', () => { if (!SCHMAL.matches) filterSchliessen(); zeichnen(); });
+  SCHMAL.addEventListener('change', zeichnen);
+  BREIT.addEventListener('change', zeichnen);
 
   document.getElementById('chips').addEventListener('click', e => {
     const k = e.target.closest('[data-chip]');
@@ -659,6 +685,7 @@ async function starten() {
   merklisteLaden();
   adresseLesen();
   verdrahten();
+  filterModusSetzen();
   try {
     const antwort = await fetch(DATEI);
     if (!antwort.ok) throw new Error(`${antwort.status} ${antwort.statusText}`);

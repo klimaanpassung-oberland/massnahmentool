@@ -115,19 +115,22 @@
       <table id="tabelle">
         <thead>
           <tr>
-            <th scope="col" class="spalte-merken"><span class="unsichtbar">Merken</span></th>
-            <th scope="col" data-sort="name">Maßnahme</th>
-            <th scope="col" data-sort="hazard">Risiko</th>
-            <th scope="col" data-sort="art">Art</th>
-            <th scope="col" data-sort="akteure">Für wen</th>
-            <th scope="col" data-sort="kosten">Kosten</th>
-            <th scope="col" data-sort="dauer">Dauer</th>
-            <th scope="col" data-sort="rueckhalt">Rückhalt</th>
-            <th scope="col" data-sort="ableitung">Ableitung</th>
-            <th scope="col" data-sort="versickerung">Versickerung</th>
-            <th scope="col" data-sort="kuehlung">Kühlung</th>
-            <th scope="col" data-sort="aufwertung">Stadtstruktur</th>
-            <th scope="col">Steckbrief</th>
+            <th scope="col" rowspan="2" class="spalte-merken"><span class="unsichtbar">Merken</span></th>
+            <th scope="col" rowspan="2" data-sort="name">Maßnahme</th>
+            <th scope="col" rowspan="2" data-sort="hazard">Risiko</th>
+            <th scope="col" rowspan="2" data-sort="art">Art</th>
+            <th scope="col" rowspan="2" data-sort="akteure">Für wen</th>
+            <th scope="col" rowspan="2" data-sort="kosten" class="mitte">Kosten</th>
+            <th scope="col" rowspan="2" data-sort="dauer" class="mitte">Dauer</th>
+            <th scope="colgroup" colspan="5" class="gruppe">Wirkung</th>
+            <th scope="col" rowspan="2" class="mitte">Steck&shy;brief</th>
+          </tr>
+          <tr>
+            <th scope="col" data-sort="rueckhalt" class="mitte">Rück&shy;halt</th>
+            <th scope="col" data-sort="ableitung" class="mitte">Ab&shy;leitung</th>
+            <th scope="col" data-sort="versickerung" class="mitte">Versicke&shy;rung</th>
+            <th scope="col" data-sort="kuehlung" class="mitte">Küh&shy;lung</th>
+            <th scope="col" data-sort="aufwertung" class="mitte">Stadt&shy;bild</th>
           </tr>
         </thead>
         <tbody id="koerper"></tbody>
