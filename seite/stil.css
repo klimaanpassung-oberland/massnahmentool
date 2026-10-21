@@ -1057,6 +1057,13 @@ body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visi
 
 .nur-druck, .druck-anhang { display: none; }
 
+/* Vorab geschriebene Massnahmenliste (werkzeuge/vorab.py): nur ohne
+   JavaScript sichtbar, also fuer Crawler und im Notfall. */
+.mit-js .vorab { display: none; }
+.vorab { margin-top: 20px; }
+.vorab table { background: var(--flaeche); border: 1px solid var(--linie); font-size: .88rem; }
+.vorab th[scope="row"] { font-weight: 500; }
+
 /* Seitenfuss mit Quelle und Seitenzahl. Tabelle und Vergleich kommen im
    Querformat, damit die Spalten Luft haben; Kacheln im Hochformat. */
 @page {
@@ -1087,7 +1094,7 @@ body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visi
   .nur-druck { display: inline; }
   .nur-bildschirm, .sprunglink, .filter-huelle, .ergebnis-kopf, .chips, .weitergeben,
   .merken, .merkleiste, .vgl-weg, .alle-wirkungen,
-  .hinweis-luecke, .filter-abdeckung, .tabellen-deckel { display: none !important; }
+  .hinweis-luecke, .filter-abdeckung, .tabellen-deckel, .vorab { display: none !important; }
   /* Graue Nebentexte in der Groesse ihrer Umgebung; die Bildschirmregel fuer
      .leise (aus der Pflegeseite) fiele auf Papier groesser aus als der Rest. */
   .leise { font-size: inherit !important; }

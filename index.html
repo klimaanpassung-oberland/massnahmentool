@@ -5,12 +5,56 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Anpassungscoaching-Tool</title>
 <meta name="description" content="Maßnahmen zur Anpassung an Hitze und Starkregen für Kommunen, Unternehmen und Haushalte in der Region Oberland. Aus dem Projekt KARE.">
-<link rel="stylesheet" href="seite/stil.css?v=4f110c1">
+<!-- Sofort, vor dem ersten Zeichnen: Mit JavaScript bleibt die vorab
+     geschriebene Massnahmenliste (fuer Crawler ohne JavaScript) unsichtbar. -->
+<script>document.documentElement.classList.add('mit-js');</script>
+<link rel="stylesheet" href="seite/stil.css?v=85a7d82">
 <!-- Bildzeichen aus dem KARE-Logo (Tropfen und Haus, ohne Schrift), damit es
      auch im Browser-Tab erkennbar bleibt. -->
 <link rel="icon" type="image/png" sizes="32x32" href="seite/bilder/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="seite/bilder/favicon-192.png">
 <link rel="apple-touch-icon" href="seite/bilder/apple-touch-icon.png">
+<script type="application/ld+json">{
+ "@context": "https://schema.org",
+ "@type": "Dataset",
+ "name": "Anpassungscoaching-Tool: Maßnahmen zur Anpassung an Hitze und Starkregen",
+ "description": "Maßnahmen zur Anpassung an Hitze und Starkregen für Kommunen, Unternehmen und Haushalte in der Region Oberland, mit Einschätzungen zu Kosten, Umsetzungsdauer und Wirkung (Rückhalt, Ableitung, Versickerung, Kühlung, Aufwertung des Stadtbilds).",
+ "url": "https://klimaanpassung-oberland.github.io/massnahmentool/",
+ "inLanguage": "de",
+ "dateModified": "2026-10-21",
+ "keywords": [
+  "Klimaanpassung",
+  "Klimawandelanpassung",
+  "Hitze",
+  "Starkregen",
+  "Maßnahmen",
+  "Kommunen",
+  "Oberland",
+  "KARE"
+ ],
+ "spatialCoverage": {
+  "@type": "Place",
+  "name": "Region Oberland: Landkreise Bad Tölz-Wolfratshausen, Garmisch-Partenkirchen, Miesbach und Weilheim-Schongau"
+ },
+ "creator": {
+  "@type": "Organization",
+  "name": "Projekt KARE – Klimawandelanpassung in der Region Oberland",
+  "url": "https://klimaanpassung-oberland.de/"
+ },
+ "distribution": {
+  "@type": "DataDownload",
+  "encodingFormat": "text/csv",
+  "contentUrl": "https://klimaanpassung-oberland.github.io/massnahmentool/daten/massnahmen.csv"
+ },
+ "variableMeasured": [
+  "Risiko",
+  "Art der Maßnahme",
+  "Zielgruppe",
+  "Kosten",
+  "Umsetzungsdauer",
+  "Wirkung"
+ ]
+}</script>
 </head>
 <body>
 
@@ -194,6 +238,76 @@
       <button type="button" id="herunterladen" class="knopf-zweit">Als CSV</button>
       <p id="weitergeben-status" class="weitergeben-status" role="status"></p>
     </div>
+
+    <!-- Beim Veroeffentlichen fuellt werkzeuge/vorab.py hier alle Massnahmen
+         als HTML ein: fuer Suchmaschinen und KI-Dienste, die kein JavaScript
+         ausfuehren. -->
+    <section class="vorab" aria-labelledby="vorab-titel">
+  <h2 id="vorab-titel">Alle 50 Maßnahmen im Überblick</h2>
+  <p>Maßnahmen zur Anpassung an Hitze und Starkregen für Kommunen, Unternehmen und
+     Haushalte in der Region Oberland, mit Einschätzungen zu Kosten, Umsetzungsdauer
+     und Wirkung. Aus dem Projekt KARE – Klimawandelanpassung in der Region Oberland.
+     Stand 21.10.2026. Die Daten gibt es auch als
+     <a href="https://klimaanpassung-oberland.github.io/massnahmentool/daten/massnahmen.csv">CSV-Datei</a>.</p>
+  <noscript><p>Zum Filtern, Sortieren und Vergleichen bitte JavaScript einschalten.</p></noscript>
+  <table>
+    <thead><tr><th scope="col">Maßnahme</th><th scope="col">Risiko</th><th scope="col">Art</th>
+      <th scope="col">Für wen</th><th scope="col">Kosten</th><th scope="col">Umsetzungsdauer</th>
+      <th scope="col">Wirkung</th><th scope="col">Steckbrief</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Abflussrückhalt und Einleitmengenbegrenzung</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>Rückhalt mittel, Ableitung gering</td><td>–</td></tr>
+      <tr><th scope="row">Ausbau und Optimierung des Kanalnetzes</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>über 100.000 €</td><td>lang</td><td>Rückhalt gering, Ableitung mittel</td><td>–</td></tr>
+      <tr><th scope="row">Bauliche Schutzmaßnahmen an Gebäude</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Bauliche Verschattung</th><td>Hitze</td><td>baulich</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Benennung eines &quot;Kümmerers&quot;</th><td>Hitze &amp; Starkregen</td><td>administrativ</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Beratung und Information spezifischer Zielgruppen zu Hitzerisiken (z.B. Unternehmen, soziale Einrichtungen)</th><td>Hitze</td><td>Information</td><td>Unternehmen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Beratung und Information spezifischer Zielgruppen zu Starkregenrisiken (z.B. Unternehmen, soziale Einrichtungen)</th><td>Starkregen</td><td>Information</td><td>Unternehmen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Bestandsaufnahme des Handlungsbedarfs</th><td>Hitze &amp; Starkregen</td><td>administrativ</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Bewirtschaftung Kanalnetzkapazitäten</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>kurz</td><td>Rückhalt gering, Ableitung gering</td><td>–</td></tr>
+      <tr><th scope="row">Dachbegrünung</th><td>Hitze &amp; Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>Rückhalt mittel, Stadtbild hoch</td><td>–</td></tr>
+      <tr><th scope="row">Einrichtung eines Förderprogramms für Fassaden-/Dachbegrünung</th><td>Hitze &amp; Starkregen</td><td>Anreizsystem</td><td>Unternehmen, Haushalte</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Einrichtung eines Förderprogramms für Flächenentsiegelung</th><td>Hitze &amp; Starkregen</td><td>Anreizsystem</td><td>Unternehmen, Haushalte</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Elementarschadenversicherung</th><td>Starkregen</td><td>nicht angegeben</td><td>Kommunen</td><td>bis 20.000 €</td><td>kurz</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Entsiegelung</th><td>Hitze &amp; Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>Rückhalt gering, Versickerung mittel, Stadtbild hoch</td><td>–</td></tr>
+      <tr><th scope="row">Erstellung eines Hitzeaktionsplans</th><td>Hitze</td><td>administrativ</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Erstellung eines Klimaanpassungskonzepts</th><td>Hitze &amp; Starkregen</td><td>administrativ</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Erstellung eines Starkregenrisikokonzepts</th><td>Starkregen</td><td>administrativ</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Erweiterung natürlicher Retentionsflächen</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>kurz</td><td>Rückhalt hoch, Versickerung mittel, Stadtbild mittel</td><td>–</td></tr>
+      <tr><th scope="row">Etablierung einer ämterübergreifenden Arbeitsgruppe Klimaanpassung</th><td>Hitze &amp; Starkregen</td><td>administrativ</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Fassadenbegrünung</th><td>Hitze &amp; Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Flächenbegrünung</th><td>Hitze &amp; Starkregen</td><td>baulich</td><td>Kommunen</td><td>bis 20.000 €</td><td>kurz</td><td>Rückhalt gering, Versickerung gering, Stadtbild hoch</td><td>–</td></tr>
+      <tr><th scope="row">Gesplittete Gebühr für Schmutz- und Niederschlagswasser</th><td>Starkregen</td><td>Anreizsystem</td><td>Unternehmen, Haushalte</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Integration von Anpassungsmaßnahmen in der Bauleitplanung</th><td>Hitze &amp; Starkregen</td><td>planerisch</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Kommunennetzwerk gründen/beitreten</th><td>Hitze &amp; Starkregen</td><td>administrativ</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Konstruktive Optimierung von Bauwerken/Anlagen</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>Ableitung gering</td><td>–</td></tr>
+      <tr><th scope="row">Mobile Schutzeinrichtungen</th><td>Starkregen</td><td>nicht angegeben</td><td>Kommunen</td><td>bis 20.000 €</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Mulden-Rigolen-Systeme</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>kurz</td><td>Rückhalt mittel, Versickerung hoch, Stadtbild mittel</td><td>–</td></tr>
+      <tr><th scope="row">Multifunktionale Retentionsflächen</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>Rückhalt mittel, Versickerung gering, Stadtbild hoch</td><td>–</td></tr>
+      <tr><th scope="row">Notwasserwege</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>Ableitung hoch, Stadtbild gering</td><td>–</td></tr>
+      <tr><th scope="row">Optimierung des Gewässerunterhalts</th><td>nicht angegeben</td><td>baulich</td><td>Kommunen</td><td>bis 20.000 €</td><td>kurz</td><td>Ableitung mittel</td><td>–</td></tr>
+      <tr><th scope="row">Optimierung von Wartung, Funktionspflege und Betrieb</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>bis 20.000 €</td><td>kurz</td><td>Ableitung gering</td><td>–</td></tr>
+      <tr><th scope="row">Politischer Beschluss</th><td>Hitze &amp; Starkregen</td><td>administrativ</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Reduzierung von &quot;Schottergärten&quot; durch Festsetzung in Bebauungsplänen</th><td>Hitze</td><td>planerisch</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Regelungen zur Errichtung von Zisternen und zur Regenwassernutzung (&quot;Zisternenpflicht&quot;)</th><td>Hitze &amp; Starkregen</td><td>planerisch</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Regenrückhaltebecken</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>über 100.000 €</td><td>lang</td><td>Rückhalt hoch</td><td>–</td></tr>
+      <tr><th scope="row">Renaturierung von Gewässern</th><td>nicht angegeben</td><td>baulich</td><td>Kommunen</td><td>über 100.000 €</td><td>lang</td><td>Rückhalt mittel, Ableitung gering, Versickerung gering, Stadtbild hoch</td><td>–</td></tr>
+      <tr><th scope="row">Rückhaltemulden</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>bis 20.000 €</td><td>kurz</td><td>Rückhalt mittel, Versickerung gering, Stadtbild mittel</td><td>–</td></tr>
+      <tr><th scope="row">Schaffung und Vernetzung von Grünflächen</th><td>Hitze</td><td>planerisch</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Schutz von Kaltluftentstehungsgebieten/Frischluftschneisen</th><td>Hitze</td><td>planerisch</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Sensibilisierung und Information der Bürgerschaft zu Starkregenrisiken</th><td>Starkregen</td><td>Information</td><td>Haushalte</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Sensibilisierung und Information der Bürgerschaft zu Verhalten bei Hitze</th><td>Hitze</td><td>Information</td><td>Haushalte</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Sicherung von Flächen für den Hochwasserschutz</th><td>Starkregen</td><td>planerisch</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Sprühnebel-Anlage</th><td>Hitze</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>mittel</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Trinkwasserbrunnen</th><td>Hitze</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Verbesserung Bauwerkskonstruktionen</th><td>nicht angegeben</td><td>baulich</td><td>Kommunen</td><td>über 100.000 €</td><td>lang</td><td>Ableitung hoch</td><td>–</td></tr>
+      <tr><th scope="row">Verbesserung des Einlaufs in Gewässerverrohrungen</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>20.000 bis 100.000 €</td><td>kurz</td><td>Ableitung mittel</td><td>–</td></tr>
+      <tr><th scope="row">Veröffentlichung von Starkregenrisikokarten</th><td>Starkregen</td><td>Information</td><td>Unternehmen, Haushalte</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Verschattung öffentlicher Raum</th><td>Hitze</td><td>nicht angegeben</td><td>Kommunen</td><td>nicht angegeben</td><td>nicht angegeben</td><td>nicht bewertet</td><td>–</td></tr>
+      <tr><th scope="row">Wälle</th><td>Starkregen</td><td>baulich</td><td>Kommunen</td><td>bis 20.000 €</td><td>mittel</td><td>Rückhalt gering, Ableitung mittel, Versickerung gering</td><td>–</td></tr>
+      <tr><th scope="row">Zisternen</th><td>Dürre &amp; Starkregen</td><td>baulich</td><td>Kommunen</td><td>bis 20.000 €</td><td>kurz</td><td>Rückhalt mittel</td><td><a href="https://klimaanpassung-oberland.github.io/massnahmentool/steckbriefe/Steckbriefe_Zisternen.pdf">Steckbrief (PDF)</a></td></tr>
+    </tbody>
+  </table>
+</section>
   </section>
 </main>
 
@@ -216,7 +330,7 @@
      örtlichen Gegebenheiten kann es zu Abweichungen kommen.</p>
 </footer>
 
-<script src="seite/csv.js?v=4f110c1"></script>
-<script src="seite/app.js?v=4f110c1"></script>
+<script src="seite/csv.js?v=85a7d82"></script>
+<script src="seite/app.js?v=85a7d82"></script>
 </body>
 </html>
