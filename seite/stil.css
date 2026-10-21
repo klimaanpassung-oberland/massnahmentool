@@ -273,7 +273,12 @@ html {
   min-height: 24px;
   width: 100%;
   hyphens: inherit;
+  /* Text unten in der 24-px-Klickflaeche, wie bei den Ueberschriften ohne
+     Knopf (Steckbrief) -- mittig sass er sonst ein paar Pixel hoeher. */
+  display: flex;
+  align-items: flex-end;
 }
+th.mitte .sortierknopf { justify-content: center; text-align: center; }
 .sortierknopf:hover { color: var(--blau); text-decoration: underline; }
 
 /* ---------- Ergebnis ---------- */
