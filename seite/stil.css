@@ -1081,7 +1081,7 @@ body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visi
 
   .nur-druck { display: inline; }
   .nur-bildschirm, .sprunglink, .filter-huelle, .ergebnis-kopf, .chips, .weitergeben,
-  .merken, .spalte-merken, .merkleiste, .vgl-weg, .alle-wirkungen,
+  .merken, .merkleiste, .vgl-weg, .alle-wirkungen,
   .hinweis-luecke, .filter-abdeckung, .tabellen-deckel { display: none !important; }
   /* Graue Nebentexte in der Groesse ihrer Umgebung; die Bildschirmregel fuer
      .leise (aus der Pflegeseite) fiele auf Papier groesser aus als der Rest. */
@@ -1127,7 +1127,24 @@ body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visi
   #tabelle tbody tr { break-inside: avoid; }
   #tabelle tbody tr:nth-child(even) td { background: #f5f7fa; }
   #tabelle tbody tr:hover { background: none; }
+  /* Feste Anteile statt „Rest fuer den Namen“: Der Name bricht oefter um,
+     dafuer haben Punkte und Marken Luft. Ueber colgroup, denn bei fester
+     Aufteilung zaehlt sonst die erste Kopfzeile, und dort ueberspannt
+     „Wirkung“ fuenf Spalten. Zusammen 100 %. */
+  #tabelle { table-layout: fixed; }
   #tabelle td.spalte-name { width: auto; min-width: 0; }
+  .sp-merken { width: 0; }
+  .sp-name { width: 24%; }
+  .sp-risiko { width: 9%; }
+  .sp-art { width: 9%; }
+  .sp-fuer { width: 9.5%; }
+  .sp-kosten { width: 5.5%; }
+  .sp-dauer { width: 6.5%; }
+  .sp-wirkung { width: 6.5%; }
+  .sp-steckbrief { width: 4%; }
+  /* Die Merken-Spalte bleibt als Zelle stehen, nur ohne Breite und Inhalt --
+     faellt sie ganz weg, verrutschen alle Breiten um eine Spalte. */
+  #tabelle .spalte-merken { display: table-cell !important; padding: 0 !important; border: 0; font-size: 0; }
   #tabelle .marke { font-size: 6.8pt; }
 
   /* Kacheln: zwei Spalten, keine zerrissenen Kacheln */

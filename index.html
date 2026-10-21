@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Anpassungscoaching-Tool</title>
 <meta name="description" content="Maßnahmen zur Anpassung an Hitze und Starkregen für Kommunen, Unternehmen und Haushalte in der Region Oberland. Aus dem Projekt KARE.">
-<link rel="stylesheet" href="seite/stil.css?v=a98ecda">
+<link rel="stylesheet" href="seite/stil.css?v=4f16b1b">
 <!-- Bildzeichen aus dem KARE-Logo (Tropfen und Haus, ohne Schrift), damit es
      auch im Browser-Tab erkennbar bleibt. -->
 <link rel="icon" type="image/png" sizes="32x32" href="seite/bilder/favicon-32.png">
@@ -149,6 +149,13 @@
       <table id="tabelle">
         <caption class="unsichtbar">Maßnahmen mit Risiko, Art, Zielgruppe, Kosten, Dauer und
           Wirkung. Spaltenköpfe sind Knöpfe zum Sortieren.</caption>
+        <!-- Spaltenbreiten fuer den Druck (stil.css); am Bildschirm ohne Wirkung. -->
+        <colgroup>
+          <col class="sp-merken"><col class="sp-name"><col class="sp-risiko"><col class="sp-art">
+          <col class="sp-fuer"><col class="sp-kosten"><col class="sp-dauer">
+          <col class="sp-wirkung"><col class="sp-wirkung"><col class="sp-wirkung"><col class="sp-wirkung"><col class="sp-wirkung">
+          <col class="sp-steckbrief">
+        </colgroup>
         <thead>
           <tr>
             <th scope="col" rowspan="2" class="spalte-merken"><span class="unsichtbar">Merken</span></th>
@@ -209,7 +216,7 @@
      örtlichen Gegebenheiten kann es zu Abweichungen kommen.</p>
 </footer>
 
-<script src="seite/csv.js?v=a98ecda"></script>
-<script src="seite/app.js?v=a98ecda"></script>
+<script src="seite/csv.js?v=4f16b1b"></script>
+<script src="seite/app.js?v=4f16b1b"></script>
 </body>
 </html>
