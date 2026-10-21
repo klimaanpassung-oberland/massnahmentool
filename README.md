@@ -12,14 +12,29 @@ die Inhalte an anderer Stelle.
 
 ## Einbinden per iframe
 
+Empfohlen: eine feste Höhe nach der Fenstergröße. Das Tool scrollt dann im
+iframe, und nur so bleiben Seitenkopf, Ergebnisleiste und Tabellenkopf beim
+Scrollen stehen und die Merkleiste unten angeheftet.
+
 ```html
 <iframe src="https://klimaanpassung-oberland.github.io/massnahmentool/"
-        width="100%" height="1400" style="border:0" loading="lazy"
-        title="Anpassungscoaching-Tool"></iframe>
+        title="Anpassungscoaching-Tool"
+        style="width:100%; height:85vh; min-height:600px; border:0"
+        loading="lazy"></iframe>
 ```
 
-Wo die umgebende Seite Skripte erlaubt, kann der iframe mit dem Inhalt
-mitwachsen. Die Seite meldet dafür ihre Höhe:
+Filtert das Redaktionssystem `style` heraus, eine feste Pixelhöhe:
+
+```html
+<iframe src="https://klimaanpassung-oberland.github.io/massnahmentool/"
+        title="Anpassungscoaching-Tool" width="100%" height="800"
+        frameborder="0" loading="lazy"></iframe>
+```
+
+Nicht mehr empfohlen, aber möglich: Der iframe wächst mit dem Inhalt, und
+die umgebende Seite scrollt. Dann bleiben Kopf und Tabellenkopf nicht stehen,
+und die Merkleiste steht über den Ergebnissen statt unten. Die Seite meldet
+dafür ihre Höhe:
 
 ```html
 <script>
@@ -32,9 +47,9 @@ window.addEventListener('message', function (e) {
 </script>
 ```
 
-In ArcGIS StoryMaps geht das nicht. Dort den iframe-Code in den Embed-Block
-einfügen, nicht die nackte Adresse, sonst setzt StoryMaps eine eigene, flache
-Höhe.
+In ArcGIS StoryMaps geht das Mitwachsen nicht. Dort den iframe-Code mit
+fester Pixelhöhe in den Embed-Block einfügen, nicht die nackte Adresse, sonst
+setzt StoryMaps eine eigene, flache Höhe.
 
 ## Lizenz
 
