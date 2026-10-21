@@ -34,10 +34,12 @@ const STANDARD_ANSICHT = 'tabelle';
 // Wirkungen hoch zuerst.
 const SORTIER_RICHTUNG = { name: true, kosten: true, dauer: true, hazard: true, art: true, akteure: true };
 
-// Schmal = Handy. Gleiche Grenze wie in stil.css.
-const SCHMAL = window.matchMedia('(max-width: 860px)');
+// Schmal = Handy. Gleiche Grenze wie in stil.css. Nur auf dem Bildschirm:
+// Beim Drucken ist ein A4-Blatt ebenfalls schmaler als 860 px, und ohne
+// „screen“ schaltete die Seite mitten im Druck auf Kacheln um.
+const SCHMAL = window.matchMedia('screen and (max-width: 860px)');
 // Ab dieser Breite passt die Tabelle neben die Filterleiste.
-const BREIT = window.matchMedia('(min-width: 1300px)');
+const BREIT = window.matchMedia('screen and (min-width: 1300px)');
 
 const zustand = {
   sortierung: { feld: null, auf: true },
@@ -200,7 +202,9 @@ function karteBauen(e) {
         : '') +
       (steckbrief
         ? `<a class="steckbrief-knopf" href="${esc(steckbrief)}" target="_blank" rel="noopener">Steckbrief öffnen (PDF)` +
-          `<span class="unsichtbar">: ${esc(e.name)}</span>${NEUES_FENSTER}</a>`
+          `<span class="unsichtbar">: ${esc(e.name)}</span>${NEUES_FENSTER}</a>` +
+          // Auf Papier die volle Adresse statt eines nicht anklickbaren Links.
+          `<span class="nur-druck druck-adresse" aria-hidden="true">Steckbrief: ${esc(new URL(steckbrief, location.href).href)}</span>`
         : '') +
     `</article>`;
   return li;
@@ -224,7 +228,10 @@ function zeileBauen(e) {
     `<td class="mitte">${geld(e.kosten)}</td>` +
     `<td class="mitte">${punkte(e.dauer, DAUER)}</td>` +
     WIRKUNGEN.map(w => `<td class="mitte">${punkte(e[w.key], STUFE)}</td>`).join('') +
-    `<td class="mitte">${steckbrief ? `<a class="steckbrief" href="${esc(steckbrief)}" target="_blank" rel="noopener" aria-label="Steckbrief ${esc(e.name)} (PDF, öffnet in neuem Fenster)">PDF</a>` : STRICH}</td>`;
+    `<td class="mitte">${steckbrief
+      ? `<a class="steckbrief nur-bildschirm" href="${esc(steckbrief)}" target="_blank" rel="noopener" aria-label="Steckbrief ${esc(e.name)} (PDF, öffnet in neuem Fenster)">PDF</a>` +
+        '<span class="nur-druck" aria-hidden="true">ja</span>'
+      : STRICH}</td>`;
   return tr;
 }
 
@@ -484,8 +491,9 @@ const VERGLEICH_ZEILEN = [
     html: e => stufeText(e[w.key], STUFE) })),
   { name: 'Steckbrief', html: e => {
     const a = steckbriefAdresse(e.steckbrief);
-    return a ? `<a class="steckbrief" href="${esc(a)}" target="_blank" rel="noopener">PDF öffnen` +
-      `<span class="unsichtbar">: Steckbrief ${esc(e.name)}</span>${NEUES_FENSTER}</a>` : STRICH;
+    return a ? `<a class="steckbrief nur-bildschirm" href="${esc(a)}" target="_blank" rel="noopener">PDF öffnen` +
+      `<span class="unsichtbar">: Steckbrief ${esc(e.name)}</span>${NEUES_FENSTER}</a>` +
+      '<span class="nur-druck" aria-hidden="true">ja, siehe Anhang</span>' : STRICH;
   } },
 ];
 
@@ -586,6 +594,7 @@ function zeichnen() {
   const karten = !vergleich && effektiveAnsicht() === 'karten';
   const tabelleZeigen = !vergleich && !karten;
   document.body.classList.toggle('im-vergleich', vergleich);
+  document.body.classList.toggle('ansicht-tabelle', tabelleZeigen);
   filterModusSetzen();
 
   const liste = document.getElementById('karten');
@@ -642,6 +651,10 @@ function zeichnen() {
 
   chipsZeichnen();
   adresseSchreiben();
+  // Druckkopf und Anhang gleich mitfuellen, nicht erst beim Drucken: So
+  // stimmen sie auch, wenn ein Programm die Seite direkt als PDF druckt.
+  druckkopfFuellen();
+  druckAnhangFuellen(vergleich ? vergleichsListe().slice(0, MAX_VERGLEICH) : (karten ? [] : treffer));
   kopfleisteMessen();
   hoeheMelden();
 }
@@ -719,19 +732,22 @@ function druckkopfFuellen() {
     ? `Vergleich von ${imVergleich} Maßnahmen`
     : `${n} Maßnahme${n === 1 ? '' : 'n'}` + (teile.length ? ` · Auswahl: ${teile.join(' · ')}` : ' · ohne Filter');
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  document.getElementById('druck-stand').textContent = `Stand ${heute} · ${location.href}`;
+  document.getElementById('druck-stand').textContent = `Stand ${heute} · Diese Auswahl online: ${location.href}`;
 }
 
-// Im Ausdruck alle Bewertungen zeigen, danach wieder zuklappen wie vorher.
-let vorDruckOffen = [];
-window.addEventListener('beforeprint', () => {
-  druckkopfFuellen();
-  vorDruckOffen = [...document.querySelectorAll('details.alle-wirkungen')].map(d => d.open);
-  document.querySelectorAll('details.alle-wirkungen').forEach(d => { d.open = true; });
-});
-window.addEventListener('afterprint', () => {
-  document.querySelectorAll('details.alle-wirkungen').forEach((d, i) => { d.open = !!vorDruckOffen[i]; });
-});
+/** Steckbriefe der gedruckten Massnahmen mit voller Adresse. In den Kacheln
+ *  steht die Adresse schon an der Kachel, dort bleibt der Anhang leer. */
+function druckAnhangFuellen(liste) {
+  const mit = liste.filter(e => steckbriefAdresse(e.steckbrief));
+  const ziel = document.getElementById('druck-anhang');
+  ziel.innerHTML = mit.length
+    ? '<h2>Steckbriefe</h2><ul>' + mit.map(e =>
+        `<li><b>${esc(e.name)}:</b> ${esc(new URL(steckbriefAdresse(e.steckbrief), location.href).href)}</li>`).join('') + '</ul>'
+    : '';
+}
+
+// Datum im Druckkopf auf den Moment des Druckens setzen.
+window.addEventListener('beforeprint', druckkopfFuellen);
 
 function alsCsv() {
   const treffer = zustand.vergleich ? vergleichsListe().slice(0, MAX_VERGLEICH) : sortieren(gefiltert());

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Anpassungscoaching-Tool</title>
 <meta name="description" content="Maßnahmen zur Anpassung an Hitze und Starkregen für Kommunen, Unternehmen und Haushalte in der Region Oberland. Aus dem Projekt KARE.">
-<link rel="stylesheet" href="seite/stil.css?v=73aaa55">
+<link rel="stylesheet" href="seite/stil.css?v=eb4b006">
 <!-- Bildzeichen aus dem KARE-Logo (Tropfen und Haus, ohne Schrift), damit es
      auch im Browser-Tab erkennbar bleibt. -->
 <link rel="icon" type="image/png" sizes="32x32" href="seite/bilder/favicon-32.png">
@@ -31,8 +31,18 @@
 
 <!-- Nur im Ausdruck: wofuer diese Liste steht und wo man sie wiederfindet. -->
 <div class="druckkopf" aria-hidden="true">
-  <p id="druck-auswahl"></p>
-  <p id="druck-stand"></p>
+  <p class="druck-auswahl" id="druck-auswahl"></p>
+  <p class="druck-stand" id="druck-stand"></p>
+  <!-- Auf Papier gibt es keine Tooltips: ohne Legende waeren die Punkte
+       nicht zu entschluesseln. -->
+  <p class="druck-legende">
+    <span><span class="punkte"><span class="punkt punkt-voll"></span><span class="punkt punkt-voll"></span><span class="punkt punkt-voll"></span></span> hoch bzw. lang</span>
+    <span><span class="punkte"><span class="punkt punkt-voll"></span><span class="punkt punkt-voll"></span><span class="punkt punkt-leer"></span></span> mittel</span>
+    <span><span class="punkte"><span class="punkt punkt-voll"></span><span class="punkt punkt-leer"></span><span class="punkt punkt-leer"></span></span> gering bzw. kurz</span>
+    <span>0 keine Wirkung</span>
+    <span>– nicht bewertet</span>
+    <span>€ bis 20.000 € · €€ bis 100.000 € · €€€ darüber</span>
+  </p>
 </div>
 
 <main class="raster">
@@ -162,6 +172,10 @@
 
     <div id="vergleich" class="vergleich" hidden></div>
 
+    <!-- Nur im Ausdruck: Auf Papier ist „PDF“ nicht anklickbar, deshalb die
+         Steckbriefe mit vollstaendiger Adresse am Ende. -->
+    <section class="druck-anhang" id="druck-anhang" aria-hidden="true"></section>
+
     <p id="leer" class="leer" hidden></p>
 
     <div class="weitergeben" aria-label="Auswahl weitergeben">
@@ -184,15 +198,15 @@
     <dt>Wirkung</dt>
     <dd>Drei Stufen von gering bis hoch. „Nicht bewertet“ heißt, dass dazu
         nichts hinterlegt ist — nicht, dass die Wirkung fehlt.</dd>
-    <dt>Merkliste</dt>
-    <dd>Gilt, bis das Browserfenster geschlossen wird. Um eine Auswahl
+    <dt class="nur-bildschirm">Merkliste</dt>
+    <dd class="nur-bildschirm">Gilt, bis das Browserfenster geschlossen wird. Um eine Auswahl
         aufzuheben oder weiterzugeben: „Link zur Auswahl kopieren“.</dd>
   </dl>
   <p class="warnung">Die Einschätzungen beruhen auf Expertenmeinungen. Je nach
      örtlichen Gegebenheiten kann es zu Abweichungen kommen.</p>
 </footer>
 
-<script src="seite/csv.js?v=73aaa55"></script>
-<script src="seite/app.js?v=73aaa55"></script>
+<script src="seite/csv.js?v=eb4b006"></script>
+<script src="seite/app.js?v=eb4b006"></script>
 </body>
 </html>

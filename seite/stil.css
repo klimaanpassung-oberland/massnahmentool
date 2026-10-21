@@ -1012,28 +1012,115 @@ body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visi
 
 /* ---------- Druck ---------- */
 
+.nur-druck, .druck-anhang { display: none; }
+
+/* Seitenfuss mit Quelle und Seitenzahl. Tabelle und Vergleich kommen im
+   Querformat, damit die Spalten Luft haben; Kacheln im Hochformat. */
+@page {
+  size: A4 portrait;
+  margin: 12mm 11mm 15mm;
+  @bottom-left {
+    content: "Anpassungscoaching-Tool · Projekt KARE – Klimawandelanpassung in der Region Oberland";
+    font: 7pt "Segoe UI", system-ui, sans-serif;
+    color: #666;
+  }
+  @bottom-right {
+    content: "Seite " counter(page) " von " counter(pages);
+    font: 7pt "Segoe UI", system-ui, sans-serif;
+    color: #666;
+  }
+}
+@page quer { size: A4 landscape; }
+
+/* Auf Papier greifen je nach Format die Bildschirmregeln fuer Handy oder
+   Desktop -- ein A4-Blatt hochkant ist so schmal wie ein Tablet. Deshalb ist
+   hier alles ausdruecklich festgelegt. */
 @media print {
-  @page { margin: 14mm 12mm; }
-  body { background: #fff; color: #000; font-size: 10.5pt; }
-  .filter-huelle, .ergebnis-kopf, .chips, .weitergeben, .merken, .spalte-merken, .merkleiste, .vgl-weg,
-  .alle-wirkungen summary, .hinweis-luecke { display: none !important; }
-  .kopf { border-bottom: 2px solid #1a65ac; padding: 0 0 6px; }
-  .logo { height: 48px; background: none !important; padding: 0 !important; }
-  .druckkopf { display: block; margin: 8px 0 10px; font-size: 9pt; color: #444; }
-  .druckkopf p { margin: 0; overflow-wrap: anywhere; }
-  .raster { display: block; padding: 0; max-width: none; }
-  .karten { display: block; }
-  .karte { break-inside: avoid; margin-bottom: 8px; }
-  .karte article { border: 1px solid #bbb; padding: 8px 10px; gap: 4px; }
-  .alle-wirkungen { border-top: 1px dotted #bbb; }
-  .alle-wirkungen dl { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; }
-  .steckbrief-knopf::after { content: " – " attr(href); font-weight: 400; color: #444; font-size: 8.5pt; overflow-wrap: anywhere; }
-  .tabelle-rahmen { border: 0; overflow: visible; }
-  table { font-size: 8.5pt; }
-  thead th { position: static; }
-  .fuss { padding: 8px 0 0; break-inside: avoid; }
-  .mit-merkleiste { padding-bottom: 0; }
-  .vergleich-rahmen { border: 0; overflow: visible; }
-  .vergleich-tabelle { font-size: 9pt; }
-  .vergleich-tabelle td.beste { background: #e4ecf6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.ansicht-tabelle, body.im-vergleich { page: quer; }
+  html { scroll-padding: 0; }
+  body { background: #fff; color: #000; font-size: 9pt; padding: 0 !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .nur-druck { display: inline; }
+  .nur-bildschirm, .sprunglink, .filter-huelle, .ergebnis-kopf, .chips, .weitergeben,
+  .merken, .spalte-merken, .merkleiste, .vgl-weg, .alle-wirkungen,
+  .hinweis-luecke, .filter-abdeckung { display: none !important; }
+  /* Graue Nebentexte in der Groesse ihrer Umgebung; die Bildschirmregel fuer
+     .leise (aus der Pflegeseite) fiele auf Papier groesser aus als der Rest. */
+  .leise { font-size: inherit !important; }
+
+  /* Kopf */
+  .kopf { position: static !important; padding: 0 0 5px !important; border-bottom: 2px solid #1a65ac; background: none; }
+  .kopf-inhalt { flex-direction: row !important; align-items: center !important; justify-content: space-between !important; max-width: none; gap: 12px !important; }
+  .kopf h1 { font-size: 15pt !important; color: #1a65ac; line-height: 1.2; }
+  .unterzeile { display: block !important; font-size: 8.5pt !important; color: #444; margin-top: 2px; }
+  .logo { height: 40px !important; background: none !important; padding: 0 !important; }
+
+  .druckkopf { display: block; margin: 5px 0 7px; font-size: 8pt; color: #333; }
+  .druckkopf p { margin: 0 0 2px; overflow-wrap: anywhere; }
+  .druck-auswahl { font-weight: 600; font-size: 9.5pt; color: #000; }
+  .druck-stand { color: #555; }
+  .druck-legende {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px;
+    margin-top: 5px !important; padding: 4px 8px;
+    background: #f1f4f8; border-radius: 3px; color: #222;
+  }
+  .druck-legende .punkte { margin-right: 3px; }
+
+  .raster { display: block !important; padding: 0 !important; max-width: none !important; }
+  .ergebnis { min-width: 0; }
+
+  /* Tabelle: Kopf auf jeder Seite, keine zerrissenen Zeilen, Zebrastreifen */
+  .tabelle-rahmen { border: 0 !important; border-radius: 0 !important; overflow: visible !important; background: none; }
+  #tabelle { font-size: 7.8pt; }
+  #tabelle thead { position: static !important; display: table-header-group; }
+  #tabelle thead th {
+    position: static !important; box-shadow: none !important; background: #fff;
+    border-bottom: 1.5px solid #1a65ac !important;
+    color: #000; font-size: 7.3pt; padding: 3px 4px 4px;
+  }
+  #tabelle thead th.gruppe { border-bottom: 1px solid #9aa6b5 !important; }
+  #tabelle thead th[aria-sort]::after { font-size: .8em; }
+  /* Knoepfe malt der Browser im wiederholten Tabellenkopf nicht mit --
+     ab Seite 2 fehlten sonst die sortierbaren Ueberschriften. Im Druck sind
+     sie deshalb nur Text. */
+  .sortierknopf { display: contents; }
+  #tabelle td { padding: 2.5px 4px; border-bottom: 0.5px solid #d5dae0; }
+  #tabelle tbody tr { break-inside: avoid; }
+  #tabelle tbody tr:nth-child(even) td { background: #f5f7fa; }
+  #tabelle tbody tr:hover { background: none; }
+  #tabelle td.spalte-name { width: auto; min-width: 0; }
+  #tabelle .marke { font-size: 6.8pt; }
+
+  /* Kacheln: zwei Spalten, keine zerrissenen Kacheln */
+  .karten { display: block !important; columns: 2; column-gap: 7mm; }
+  .karte { break-inside: avoid; margin-bottom: 4mm; }
+  .karte article { border: 0.5px solid #b8c2ce; padding: 6px 8px; gap: 3px; height: auto; }
+  .karte h3 { font-size: 9.5pt; }
+  .fakten { font-size: 8.3pt; }
+  .steckbrief-knopf { display: none; }
+  .druck-adresse { display: block; font-size: 7.3pt; color: #444; overflow-wrap: anywhere; }
+
+  /* Vergleich */
+  .vergleich-rahmen { border: 0 !important; overflow: visible !important; }
+  .vergleich-tabelle { font-size: 8.5pt; }
+  .vergleich-tabelle tbody th[scope="row"], .vgl-ecke { position: static !important; }
+  .vergleich-tabelle td.beste { background: #e4ecf6 !important; }
+  .vgl-erklaerung { display: block !important; }
+  .vergleich-tabelle tr { break-inside: avoid; }
+
+  /* Anhang: Steckbriefe mit voller Adresse */
+  .druck-anhang { display: block; margin-top: 6mm; font-size: 7.8pt; }
+  .druck-anhang h2 { font-size: 9.5pt; margin: 0 0 3px; color: #1a65ac; }
+  .druck-anhang ul { margin: 0; padding-left: 14px; }
+  .druck-anhang li { overflow-wrap: anywhere; margin: 1px 0; }
+
+  /* Hinweise zum Lesen: knapp, zweispaltig */
+  .fuss { padding: 5mm 0 0 !important; font-size: 7.8pt; color: #333; break-inside: avoid; max-width: none; }
+  .fuss h2 { font-size: 9.5pt; margin: 0 0 3px; color: #1a65ac; }
+  .fuss dl { display: grid; grid-template-columns: max-content 1fr; gap: 1px 10px; margin: 0; }
+  .fuss dt { margin: 0; }
+  .fuss dd { margin: 0; }
+  .warnung { margin-top: 4px; }
+  .mit-merkleiste { padding-bottom: 0 !important; }
 }
