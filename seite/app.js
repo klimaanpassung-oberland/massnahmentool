@@ -24,18 +24,11 @@ const WIRKUNGEN = [
   { key: 'aufwertung', name: 'Stadtstruktur', erklaerung: 'wertet Ort und Stadtbild auf' },
 ];
 
-// Am Desktop startet die Seite mit der Tabelle (auf dem Handy immer
-// Karteikarten). Wer umschaltet, behaelt die Wahl auf diesem Geraet.
+// Am Desktop startet die Seite immer mit der Tabelle (auf dem Handy immer
+// Karteikarten). Umschalten gilt fuer den Besuch, nicht dauerhaft -- sonst
+// hebelte ein einmaliger Klick die Startansicht fuer immer aus. Nur eine
+// Ansicht in der Adresse (?ansicht=karten) geht vor.
 const STANDARD_ANSICHT = 'tabelle';
-const ANSICHT_SCHLUESSEL = 'kare-ansicht';
-
-function gemerkteAnsicht() {
-  try {
-    const a = localStorage.getItem(ANSICHT_SCHLUESSEL);
-    if (a === 'karten' || a === 'tabelle') return a;
-  } catch { /* egal */ }
-  return STANDARD_ANSICHT;
-}
 
 // Wie die Auswahl „Sortieren“ ordnet: Kosten und Dauer niedrig zuerst,
 // Wirkungen hoch zuerst.
@@ -397,10 +390,12 @@ function adresseLesen() {
     const feld = s.replace(/-ab$/, '');
     if (SPALTEN.includes(feld)) zustand.sortierung = { feld, auf: !s.endsWith('-ab') };
   }
-  // Adresse vor eigener Gewohnheit vor Standard. Alte Links mit
+  // Ansicht aus der Adresse, sonst Standard. Alte Links mit
   // ?ansicht=tabelle funktionieren weiter.
   const ansicht = p.get('ansicht');
-  zustand.ansicht = ansicht === 'tabelle' || ansicht === 'karten' ? ansicht : gemerkteAnsicht();
+  zustand.ansicht = ansicht === 'tabelle' || ansicht === 'karten' ? ansicht : STANDARD_ANSICHT;
+  // Frueher dauerhaft gemerkte Wahl aufraeumen.
+  try { localStorage.removeItem('kare-ansicht'); } catch { /* egal */ }
   const vgl = (p.get('vergleich') || '').split(',').filter(Boolean);
   const merk = (p.get('merkliste') || '').split(',').filter(Boolean);
   if (vgl.length) {
@@ -806,7 +801,6 @@ function verdrahten() {
   document.querySelectorAll('.umschalter button').forEach(b =>
     b.addEventListener('click', () => {
       zustand.ansicht = b.dataset.ansicht;
-      try { localStorage.setItem(ANSICHT_SCHLUESSEL, zustand.ansicht); } catch { /* egal */ }
       zeichnen();
     }));
   // Sortierbare Spaltenkoepfe bekommen einen echten Knopf. Eine anklickbare
