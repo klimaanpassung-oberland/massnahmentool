@@ -416,18 +416,25 @@ function adresseLesen() {
 
 // --------------------------------------------------------------- Merkliste
 
+// Die Merkliste gilt, bis der Tab geschlossen wird (sessionStorage): Neu
+// laden und zwischen Liste und Vergleich wechseln uebersteht sie, beim
+// naechsten Besuch ist sie leer. Sonst saehe am gemeinsam genutzten Rechner
+// die naechste Person die Liste der vorigen. Wer eine Auswahl behalten will,
+// kopiert den Link.
 const MERK_SCHLUESSEL = 'kare-merkliste';
 
 function merklisteLaden() {
   try {
-    const roh = localStorage.getItem(MERK_SCHLUESSEL);
+    // Frueher lag die Liste dauerhaft in localStorage; dort aufraeumen.
+    localStorage.removeItem(MERK_SCHLUESSEL);
+    const roh = sessionStorage.getItem(MERK_SCHLUESSEL);
     if (roh) zustand.merkliste = new Set(JSON.parse(roh));
   } catch { /* privates Fenster o. ae.: dann eben ohne Gedaechtnis */ }
 }
 
 function merklisteSpeichern() {
   zustand.merklisteAusLink = false;
-  try { localStorage.setItem(MERK_SCHLUESSEL, JSON.stringify([...zustand.merkliste])); } catch { /* egal */ }
+  try { sessionStorage.setItem(MERK_SCHLUESSEL, JSON.stringify([...zustand.merkliste])); } catch { /* egal */ }
 }
 
 /** „Nur Merkliste“ aus. Kam die Liste aus einem geteilten Link, gilt danach
