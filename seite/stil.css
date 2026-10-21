@@ -22,6 +22,7 @@
   --orange-text: #c04a30;
   /* Schrift auf blauem Grund (Knoepfe, Zaehler): weiss, im dunklen Modus dunkel. */
   --auf-blau: #ffffff;
+  --pfeil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%231a1a1a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --hitze: #b4441f;
   --hitze-hell: #fbe9e4;
 }
@@ -43,6 +44,7 @@
     --feld-rand: #6b7480;
     --orange-text: #f08a72;
     --auf-blau: #0d1520;
+    --pfeil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23e8eaed' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     --hitze: #f39a7e;
     --hitze-hell: #3a2220;
   }
@@ -300,7 +302,20 @@ html {
 body:not(.pflege) .kopf { position: sticky; top: 0; z-index: 10; }
 #zaehler { margin: 0; font-weight: 600; }
 .ansicht-wahl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-#sortierung { width: auto; background: var(--flaeche); }
+/* Eigener Pfeil statt des eingebauten: Den setzt jeder Browser anders, in
+   Chrome und Edge fast ohne Abstand zum Rand. */
+#sortierung {
+  width: auto;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--flaeche);
+  background-image: var(--pfeil);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 8px;
+  padding-right: 36px;
+  cursor: pointer;
+}
 
 .umschalter { display: inline-flex; border: 1px solid var(--blau); border-radius: 6px; overflow: hidden; }
 .umschalter button {
