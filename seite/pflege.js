@@ -345,6 +345,25 @@ const AKTEURE = { K: 'Kommunen', U: 'Unternehmen', P: 'Haushalte' };
 // Ab so vielen wegfallenden Massnahmen fragt die Seite vor dem Veroeffentlichen nach.
 const BESTAETIGEN_AB = 3;
 
+/** Zeigt ein Link auf den eigenen Ordner steckbriefe/ -- etwa aus „Als CSV“
+ *  der oeffentlichen Seite, die volle Adressen schreibt --, wird daraus wieder
+ *  der Dateiname. So bleibt die Tabelle unabhaengig davon, unter welcher
+ *  Adresse die Seite gerade laeuft. */
+const EIGENE_ADRESSEN = [
+  'https://klimaanpassung-oberland.github.io/massnahmentool/',
+  new URL('./', location.href).href,
+];
+function eigenerSteckbrief(adresse) {
+  for (const basis of EIGENE_ADRESSEN) {
+    const vorne = basis + ORDNER_PDF + '/';
+    if (adresse.toLowerCase().startsWith(vorne.toLowerCase())) {
+      const rest = adresse.slice(vorne.length).split(/[?#]/)[0];
+      try { const name = decodeURIComponent(rest); if (name && !name.includes('/')) return name; } catch { /* dann eben nicht */ }
+    }
+  }
+  return null;
+}
+
 /** Prueft und bereinigt einen Wert. Gibt { wert, fehler?, warnung? } zurueck. */
 function wertPruefen(feld, roh, link) {
   let wert = String(roh ?? '').replace(/\s+/g, ' ').trim();
@@ -370,6 +389,8 @@ function wertPruefen(feld, roh, link) {
     if (wert === '') return { wert };
     if (/^https?:\/\//i.test(wert)) {
       try { new URL(wert); } catch { return { wert, fehler: `„${wert}“ ist kein gültiger Link` }; }
+      const eigen = eigenerSteckbrief(wert);
+      if (eigen) return { wert: eigen, umgewandelt: true };
       return /^http:/i.test(wert)
         ? { wert, warnung: `Link ohne https — manche Browser blockieren den Download` }
         : { wert };
@@ -409,6 +430,7 @@ function pruefen() {
 
   const eintraege = [];
   const gesehen = new Map();
+  let umgewandelt = 0;
   for (const zeile of roh.zeilen.slice(kopfIndex + 1)) {
     if (!zeile.werte.some(w => w && String(w).trim())) continue;
     const e = { _zeile: zeile.nr };
@@ -418,6 +440,7 @@ function pruefen() {
       e[f.key] = r.wert;
       if (r.fehler) melde('fehler', `${f.kopf}: ${r.fehler}`, zeile.nr);
       if (r.warnung) melde('warnung', `${f.kopf}: ${r.warnung}`, zeile.nr);
+      if (r.umgewandelt) umgewandelt++;
     }
     if (!e.name) { melde('fehler', 'Der Name der Maßnahme fehlt.', zeile.nr); continue; }
     if (gesehen.has(e.name)) {
@@ -445,6 +468,10 @@ function pruefen() {
   };
   ohne('hazard', 'Risiko');
   ohne('art', 'Art');
+  if (umgewandelt) {
+    melde('hinweis', `${umgewandelt} Steckbrief${umgewandelt === 1 ? '' : 'e'} als volle Adresse eingetragen ` +
+      `(vermutlich aus „Als CSV“ der öffentlichen Seite) — wieder in den Dateinamen umgewandelt.`);
+  }
 
   // Eine Tabelle ohne Massnahmen ist fast immer ein Versehen -- etwa das
   // falsche Blatt oder eine leer gespeicherte Datei. Veroeffentlicht leerte
@@ -502,6 +529,12 @@ function vergleichen() {
     else ergebnis.gleich++;
   }
   ergebnis.entfernt = alt.filter(e => !neuNamen.has(e.name));
+  // Reihenfolge der Massnahmen, die in beiden Staenden vorkommen. Sie
+  // bestimmt die Standard-Sortierung der oeffentlichen Seite.
+  const altNamen = new Set(alt.map(e => e.name));
+  const vorher = alt.filter(e => neuNamen.has(e.name)).map(e => e.name);
+  const nachher = neu.filter(e => altNamen.has(e.name)).map(e => e.name);
+  ergebnis.reihenfolge = vorher.some((n, i) => n !== nachher[i]);
   ergebnis.nurReihenfolge = !ergebnis.neu.length && !ergebnis.geaendert.length &&
     !ergebnis.entfernt.length && zustand.neu.csv !== zustand.stand.text;
   return ergebnis;
@@ -518,7 +551,7 @@ function nachrichtVorschlagen(v) {
     if (v.neu.length) teile.push(`${v.neu.length} neu`);
     if (v.geaendert.length) teile.push(`${v.geaendert.length} geaendert`);
     if (v.entfernt.length) teile.push(`${v.entfernt.length} entfernt`);
-    if (v.nurReihenfolge) teile.push('Reihenfolge');
+    if (v.reihenfolge) teile.push('Reihenfolge geaendert');
   } else if (csvGeaendert()) teile.push('Tabelle ersetzt');
   const pdf = zustand.pdfs.size;
   let text = teile.length ? `Massnahmen aktualisiert: ${teile.join(', ')}` : '';
@@ -569,10 +602,17 @@ function aenderungenZeichnen(v) {
     return;
   }
   const kinder = [el('h3', {}, 'Änderungen gegenüber dem veröffentlichten Stand')];
-  if (!v.neu.length && !v.geaendert.length && !v.entfernt.length) {
+  if (!v.neu.length && !v.geaendert.length && !v.entfernt.length && !v.reihenfolge) {
     kinder.push(el('p', {}, v.nurReihenfolge
-      ? 'Inhaltlich gleich, nur die Reihenfolge oder Schreibweise in der Datei ist anders.'
+      ? 'Inhaltlich gleich, nur die Schreibweise in der Datei ist anders.'
       : 'Keine Änderungen an den Maßnahmen.'));
+  }
+  if (v.reihenfolge) {
+    kinder.push(el('p', { class: 'meldungen', 'data-art': 'warnung' },
+      el('b', {}, 'Die Reihenfolge der Maßnahmen ist anders als bisher. '),
+      'Sie bestimmt die Standard-Sortierung der öffentlichen Seite. War das nicht beabsichtigt — etwa weil die ' +
+      'Datei aus „Als CSV“ der öffentlichen Seite oder aus einer sortierten Excel-Ansicht stammt —, besser von ' +
+      '„Aktuellen Stand als Excel herunterladen“ ausgehen.'));
   }
   if (v.neu.length) kinder.push(el('details', { class: 'aenderung', 'data-art': 'neu', open: '' },
     el('summary', {}, `${v.neu.length} neue Maßnahme${v.neu.length === 1 ? '' : 'n'}`),
