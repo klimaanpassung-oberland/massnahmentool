@@ -27,7 +27,7 @@ const WIRKUNGEN = [
 // Am Desktop startet die Seite immer mit der Tabelle (auf dem Handy immer
 // Kacheln). Umschalten gilt fuer den Besuch, nicht dauerhaft -- sonst
 // hebelte ein einmaliger Klick die Startansicht fuer immer aus. Nur eine
-// Ansicht in der Adresse (?ansicht=karten) geht vor.
+// Ansicht in der Adresse (?ansicht=kacheln) geht vor.
 const STANDARD_ANSICHT = 'tabelle';
 
 // Wie die Auswahl „Sortieren“ ordnet: Kosten und Dauer niedrig zuerst,
@@ -368,7 +368,8 @@ function adresseSchreiben() {
   if (zustand.sortierung.feld) {
     p.set('sortierung', zustand.sortierung.feld + (zustand.sortierung.auf ? '' : '-ab'));
   }
-  if (zustand.ansicht !== STANDARD_ANSICHT) p.set('ansicht', zustand.ansicht);
+  // In der Adresse heisst die Kachelansicht so, wie sie auf der Seite heisst.
+  if (zustand.ansicht !== STANDARD_ANSICHT) p.set('ansicht', zustand.ansicht === 'karten' ? 'kacheln' : zustand.ansicht);
   if (zustand.vergleich && zustand.merkliste.size) {
     p.set('vergleich', [...zustand.merkliste].join(','));
   } else if (zustand.nurMerkliste && zustand.merkliste.size) {
@@ -393,7 +394,9 @@ function adresseLesen() {
   // Ansicht aus der Adresse, sonst Standard. Alte Links mit
   // ?ansicht=tabelle funktionieren weiter.
   const ansicht = p.get('ansicht');
-  zustand.ansicht = ansicht === 'tabelle' || ansicht === 'karten' ? ansicht : STANDARD_ANSICHT;
+  // ?ansicht=karten aus aelteren Links gilt weiter als Kacheln.
+  zustand.ansicht = ansicht === 'kacheln' || ansicht === 'karten' ? 'karten'
+    : ansicht === 'tabelle' ? 'tabelle' : STANDARD_ANSICHT;
   // Frueher dauerhaft gemerkte Wahl aufraeumen.
   try { localStorage.removeItem('kare-ansicht'); } catch { /* egal */ }
   const vgl = (p.get('vergleich') || '').split(',').filter(Boolean);
