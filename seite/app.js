@@ -25,7 +25,7 @@ const WIRKUNGEN = [
 ];
 
 // Am Desktop startet die Seite immer mit der Tabelle (auf dem Handy immer
-// Karteikarten). Umschalten gilt fuer den Besuch, nicht dauerhaft -- sonst
+// Kacheln). Umschalten gilt fuer den Besuch, nicht dauerhaft -- sonst
 // hebelte ein einmaliger Klick die Startansicht fuer immer aus. Nur eine
 // Ansicht in der Adresse (?ansicht=karten) geht vor.
 const STANDARD_ANSICHT = 'tabelle';
