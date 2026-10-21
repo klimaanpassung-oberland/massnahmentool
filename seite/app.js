@@ -775,8 +775,11 @@ function alsCsv() {
  *  Hoehe aendert sich mit der Fensterbreite (Umbruch) und wird mitgefuehrt. */
 function kopfleisteMessen() {
   const wurzel = document.documentElement.style;
-  wurzel.setProperty('--kopfleiste', document.querySelector('.ergebnis-kopf').offsetHeight + 'px');
-  wurzel.setProperty('--seitenkopf', document.querySelector('.kopf').offsetHeight + 'px');
+  // Genaue Hoehe, nicht offsetHeight: Das rundet auf ganze Pixel, und
+  // zwischen Leiste und Tabellenkopf blieb ein Bruchteil-Spalt, durch den
+  // beim Scrollen die Zeilen schimmerten.
+  wurzel.setProperty('--kopfleiste', document.querySelector('.ergebnis-kopf').getBoundingClientRect().height + 'px');
+  wurzel.setProperty('--seitenkopf', document.querySelector('.kopf').getBoundingClientRect().height + 'px');
 }
 
 function verdrahten() {

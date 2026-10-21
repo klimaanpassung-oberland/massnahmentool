@@ -445,6 +445,7 @@ body:not(.pflege) .kopf { position: sticky; top: 0; z-index: 10; }
   border-radius: 8px;
 }
 .tabelle-rahmen[hidden] { display: none; }
+.tabellen-deckel { display: none; }
 
 table { border-collapse: collapse; width: 100%; font-size: .88rem; }
 /* Getrennte statt zusammengelegte Rahmen: Zusammengelegte zeichnet die
@@ -505,12 +506,32 @@ tbody tr:hover { background: var(--blau-hell); }
    seitlich scrollt -- ab dieser Breite passt die Tabelle ganz hinein (sie
    braucht gut 930 px), darunter bleibt das seitliche Wischen. */
 @media (min-width: 1000px) {
-  /* clip statt hidden: schneidet die Ecken rund, ohne den Rahmen zu einem
-     Scrollbereich zu machen -- sonst haftete der Kopf nicht mehr. */
-  .tabelle-rahmen { overflow: visible; overflow: clip; }
+  /* Der Rahmen darf nicht seitlich scrollen, sonst haftete der Kopf nicht. */
+  .tabelle-rahmen { overflow: visible; }
+  #tabelle tbody tr:last-child td:first-child { border-bottom-left-radius: 7px; }
+  #tabelle tbody tr:last-child td:last-child { border-bottom-right-radius: 7px; }
+
+  /* Deckel: haftet 1 px ueber dem Kopf und zeichnet die obere Linie mit
+     runden Ecken. Der Schatten in Hintergrundfarbe fuellt die Ecken ausserhalb
+     der Rundung -- dort schienen sonst die Zeilen und die geraden Seiten-
+     linien des Rahmens durch. In Ruhe liegt er deckungsgleich auf dem Rahmen. */
+  .tabellen-deckel {
+    display: block;
+    position: sticky;
+    top: calc(var(--seitenkopf, 0px) + var(--kopfleiste, 0px));
+    z-index: 4;
+    height: 9px;
+    margin: -1px -1px -9px;
+    border: 1px solid var(--linie);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 0 0 5px var(--grund);
+    clip-path: inset(-5px -5px 0 -5px);
+    pointer-events: none;
+  }
   /* Eigener Hintergrund, damit beim Mitlaufen nichts von der Tabelle
-     darunter durchscheint. */
-  #tabelle thead { position: sticky; top: calc(var(--seitenkopf, 0px) + var(--kopfleiste, 0px)); z-index: 3; background: var(--flaeche); }
+     darunter durchscheint. 1 px unter dem Deckel, dessen Linie oben liegt. */
+  #tabelle thead { position: sticky; top: calc(var(--seitenkopf, 0px) + var(--kopfleiste, 0px) + 1px); z-index: 3; background: var(--flaeche); }
   /* Mit border-collapse wandern die Linien nicht mit; ein Schatten schon.
      Die Rahmen selbst fallen weg -- durchsichtig liessen sie die Zeilen
      darunter durchscheinen. */
@@ -1059,7 +1080,7 @@ body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visi
   .nur-druck { display: inline; }
   .nur-bildschirm, .sprunglink, .filter-huelle, .ergebnis-kopf, .chips, .weitergeben,
   .merken, .spalte-merken, .merkleiste, .vgl-weg, .alle-wirkungen,
-  .hinweis-luecke, .filter-abdeckung { display: none !important; }
+  .hinweis-luecke, .filter-abdeckung, .tabellen-deckel { display: none !important; }
   /* Graue Nebentexte in der Groesse ihrer Umgebung; die Bildschirmregel fuer
      .leise (aus der Pflegeseite) fiele auf Papier groesser aus als der Rest. */
   .leise { font-size: inherit !important; }
