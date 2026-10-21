@@ -12,7 +12,16 @@
   --flaeche: #ffffff;
   --grund: #f4f6f8;
   --punkt-leer: #cfd4da;
-  --punkt-rand: #a9b1bb;
+  /* Kontraste nach WCAG 2.2 AA nachgerechnet:
+     Strich „keine Angabe“ 5,5:1 auf Weiss (Text, mind. 4,5),
+     Rand leerer Punkte und Eingabefelder 3,8:1 (Bedienelement, mind. 3),
+     oranger Text 4,9:1 -- das Logo-Orange erreicht als Text nur 3,4. */
+  --text-fehlt: #636a72;
+  --punkt-rand: #7b838d;
+  --feld-rand: #7b838d;
+  --orange-text: #c04a30;
+  /* Schrift auf blauem Grund (Knoepfe, Zaehler): weiss, im dunklen Modus dunkel. */
+  --auf-blau: #ffffff;
   --hitze: #b4441f;
   --hitze-hell: #fbe9e4;
 }
@@ -29,7 +38,11 @@
     --flaeche: #181c22;
     --grund: #11141a;
     --punkt-leer: #3d444e;
+    --text-fehlt: #8b929c;
     --punkt-rand: #6b7480;
+    --feld-rand: #6b7480;
+    --orange-text: #f08a72;
+    --auf-blau: #0d1520;
     --hitze: #f39a7e;
     --hitze-hell: #3a2220;
   }
@@ -157,7 +170,7 @@ body {
 .suche input, #sortierung {
   width: 100%;
   padding: 7px 9px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rand);
   border-radius: 6px;
   background: var(--grund);
   color: var(--text);
@@ -174,7 +187,7 @@ body {
 }
 .knopf {
   background: var(--blau);
-  color: #fff;
+  color: var(--auf-blau);
   border: 1px solid var(--blau);
   padding: 7px 14px;
   font-size: .9rem;
@@ -187,6 +200,7 @@ body {
   color: var(--blau);
   font-size: .85rem;
   padding: 2px 4px;
+  min-height: 24px;
   text-decoration: underline;
 }
 .knopf-zweit {
@@ -201,7 +215,7 @@ body {
 }
 .knopf-zweit:hover:not(:disabled) { background: var(--blau-hell); }
 .knopf-zweit:disabled { opacity: .45; cursor: not-allowed; }
-.knopf-zweit[aria-pressed="true"] { background: var(--blau); color: #fff; }
+.knopf-zweit[aria-pressed="true"] { background: var(--blau); color: var(--auf-blau); }
 
 .anzahl {
   display: inline-block;
@@ -209,16 +223,56 @@ body {
   padding: 0 6px;
   border-radius: 10px;
   background: var(--blau);
-  color: #fff;
+  color: var(--auf-blau);
   font-size: .78rem;
   line-height: 20px;
   text-align: center;
   margin-left: 2px;
 }
 .anzahl[hidden] { display: none; }
-[aria-pressed="true"] .anzahl { background: #fff; color: var(--blau); }
+[aria-pressed="true"] .anzahl { background: var(--auf-blau); color: var(--blau); }
 
 :focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+
+/* Wer mit der Tastatur durch die Seite geht, soll das fokussierte Element
+   nicht unter den angehefteten Leisten verlieren (WCAG 2.2, 2.4.11): Beim
+   Hinscrollen bleibt oben Platz fuer Kopf, Ergebnisleiste und Tabellenkopf,
+   unten fuer die Merkleiste. */
+html {
+  scroll-padding-top: calc(var(--seitenkopf, 0px) + var(--kopfleiste, 0px) + 70px);
+  scroll-padding-bottom: 76px;
+}
+
+/* Sprunglink: unsichtbar, bis er per Tab den Fokus bekommt. */
+.sprunglink {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 30;
+  padding: 10px 16px;
+  background: var(--blau);
+  color: var(--auf-blau);
+  font-weight: 600;
+  border-radius: 0 0 6px 6px;
+  text-decoration: none;
+}
+.sprunglink:focus { top: 0; }
+.ergebnis:focus { outline: none; }
+
+/* Sortierbare Spaltenkoepfe: Knopf, der wie die Ueberschrift aussieht. */
+.sortierknopf {
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  min-height: 24px;
+  width: 100%;
+  hyphens: inherit;
+}
+.sortierknopf:hover { color: var(--blau); text-decoration: underline; }
 
 /* ---------- Ergebnis ---------- */
 
@@ -259,7 +313,7 @@ body:not(.pflege) .kopf { position: sticky; top: 0; z-index: 10; }
   cursor: pointer;
 }
 .umschalter button + button { border-left: 1px solid var(--blau); }
-.umschalter button[aria-pressed="true"] { background: var(--blau); color: #fff; }
+.umschalter button[aria-pressed="true"] { background: var(--blau); color: var(--auf-blau); }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 10px; }
 .chips[hidden] { display: none; }
@@ -459,7 +513,7 @@ tbody tr:hover { background: var(--blau-hell); }
 .spalte-merken { width: 36px; padding: 2px 0 2px 4px !important; }
 .spalte-merken .merken { margin: 0; width: 32px; height: 32px; font-size: 1.15rem; }
 
-.fehlt { color: var(--punkt-leer); }
+.fehlt { color: var(--text-fehlt); }
 
 /* Bewertungspunkte: drei Stufen, gefuellt oder leer. Die Zahl steht
    zusaetzlich im title und im aria-label, damit sie vorlesbar bleibt. */
@@ -507,7 +561,7 @@ a.steckbrief { color: var(--blau); }
   gap: 8px;
   flex-wrap: wrap;
 }
-.merk-text { font-weight: 600; color: var(--orange); margin-right: auto; }
+.merk-text { font-weight: 600; color: var(--orange-text); margin-right: auto; }
 .mit-merkleiste { padding-bottom: 64px; }
 
 /* In einem mitwachsenden iframe laege „unten“ ausser Sicht: dort steht die
@@ -602,7 +656,7 @@ a.steckbrief { color: var(--blau); }
 .link-feld {
   width: min(100%, 520px);
   padding: 5px 8px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rand);
   border-radius: 6px;
   background: var(--grund);
   color: var(--text);
@@ -665,7 +719,7 @@ a.steckbrief { color: var(--blau); }
   width: 26px; height: 26px;
   border-radius: 50%;
   background: var(--blau);
-  color: #fff;
+  color: var(--auf-blau);
   font-size: .85rem;
   flex-shrink: 0;
 }
@@ -679,7 +733,7 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
   flex: 1 1 260px;
   min-width: 0;
   padding: 7px 9px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rand);
   border-radius: 6px;
   background: var(--grund);
   color: var(--text);

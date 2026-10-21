@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Anpassungscoaching-Tool</title>
 <meta name="description" content="Maßnahmen zur Anpassung an Hitze und Starkregen für Kommunen, Unternehmen und Haushalte in der Region Oberland. Aus dem Projekt KARE.">
-<link rel="stylesheet" href="seite/stil.css?v=00edb24">
+<link rel="stylesheet" href="seite/stil.css?v=0d33a6d">
 </head>
 <body>
+
+<!-- Fuer Tastatur und Screenreader: ueber Kopf und Filter hinweg direkt zu
+     den Ergebnissen. Erscheint erst, wenn er den Fokus bekommt. -->
+<a class="sprunglink" href="#ergebnis">Zu den Maßnahmen springen</a>
 
 <header class="kopf">
   <div class="kopf-inhalt">
@@ -30,7 +34,9 @@
 
   <div class="filter-huelle" id="filter-huelle">
     <div class="filter-abdeckung" id="filter-abdeckung" hidden></div>
-    <aside class="filter" id="filter" aria-labelledby="filter-titel">
+    <!-- section statt aside: Auf dem Handy wird daraus ein Dialog, und den
+         erlaubt der Standard an einem aside nicht. -->
+    <section class="filter" id="filter" aria-labelledby="filter-titel">
       <div class="filter-kopf">
         <h2 id="filter-titel">Filter</h2>
         <button type="button" id="zuruecksetzen" class="knopf-schlicht">Alle zurücksetzen</button>
@@ -75,10 +81,11 @@
       <div class="filter-fuss">
         <button type="button" id="filter-anwenden" class="knopf knopf-breit">Maßnahmen anzeigen</button>
       </div>
-    </aside>
+    </section>
   </div>
 
-  <section class="ergebnis" aria-label="Maßnahmen">
+  <section class="ergebnis" id="ergebnis" aria-labelledby="ergebnis-titel" tabindex="-1">
+    <h2 id="ergebnis-titel" class="unsichtbar">Maßnahmen</h2>
     <div class="ergebnis-kopf">
       <button type="button" id="filter-oeffnen" class="knopf-zweit filter-knopf"
               aria-controls="filter" aria-expanded="false">
@@ -122,6 +129,8 @@
 
     <div class="tabelle-rahmen" id="tabelle-rahmen" hidden>
       <table id="tabelle">
+        <caption class="unsichtbar">Maßnahmen mit Risiko, Art, Zielgruppe, Kosten, Dauer und
+          Wirkung. Spaltenköpfe sind Knöpfe zum Sortieren.</caption>
         <thead>
           <tr>
             <th scope="col" rowspan="2" class="spalte-merken"><span class="unsichtbar">Merken</span></th>
@@ -175,7 +184,7 @@
      örtlichen Gegebenheiten kann es zu Abweichungen kommen.</p>
 </footer>
 
-<script src="seite/csv.js?v=00edb24"></script>
-<script src="seite/app.js?v=00edb24"></script>
+<script src="seite/csv.js?v=0d33a6d"></script>
+<script src="seite/app.js?v=0d33a6d"></script>
 </body>
 </html>

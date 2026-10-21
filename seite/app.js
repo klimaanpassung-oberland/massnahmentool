@@ -91,7 +91,12 @@ function esc(wert) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-const STRICH = '<span class="fehlt" title="keine Angabe">–</span>';
+// Der Strich allein waere fuer Screenreader stumm oder hiesse „Gedankenstrich“.
+const STRICH = '<span class="fehlt"><span aria-hidden="true">–</span>' +
+               '<span class="unsichtbar">keine Angabe</span></span>';
+
+// Fuer Screenreader: Hinweis an Links, die in einem neuen Fenster aufgehen.
+const NEUES_FENSTER = '<span class="unsichtbar"> (öffnet in neuem Fenster)</span>';
 
 /** Name zum Anzeigen: nach einem Schraegstrich darf umbrochen werden, sonst
  *  sprengt etwa „Kaltluftentstehungsgebieten/Frischluftschneisen“ die Spalte. */
@@ -99,20 +104,29 @@ function nameHtml(name) {
   return esc(name).replace(/\//g, '/<wbr>');
 }
 
-function punkte(wert, beschriftung) {
+/** Bewertung als drei Punkte. Fuer Screenreader ist das ein Bild mit dem
+ *  Wort als Namen („mittel“) -- ein aria-label an einem blossen span lesen
+ *  sie nicht zuverlaessig vor. Steht das Wort ohnehin daneben, bleiben die
+ *  Punkte stumm (stumm = true), sonst hiesse es „mittel mittel“. */
+function punkte(wert, beschriftung, stumm = false) {
   const n = parseInt(wert, 10);
   if (!wert || isNaN(n)) return STRICH;
-  if (n === 0) return '<span class="fehlt" title="keine">0</span>';
+  if (n === 0) {
+    return stumm ? '<span class="fehlt" aria-hidden="true">0</span>'
+      : '<span class="fehlt"><span aria-hidden="true">0</span><span class="unsichtbar">keine</span></span>';
+  }
   const text = (beschriftung && beschriftung[wert]) || wert;
-  return `<span class="punkte" title="${text}" aria-label="${text}">` +
+  const name = stumm ? 'aria-hidden="true"' : `role="img" aria-label="${text}"`;
+  return `<span class="punkte" title="${text}" ${name}>` +
          '<span class="punkt punkt-voll" aria-hidden="true"></span>'.repeat(n) +
          '<span class="punkt punkt-leer" aria-hidden="true"></span>'.repeat(3 - n) + '</span>';
 }
 
-function geld(wert) {
+function geld(wert, stumm = false) {
   const n = parseInt(wert, 10);
   if (!wert || isNaN(n) || n < 1) return STRICH;
-  return `<span class="geld" title="${KOSTEN[n]}" aria-label="${KOSTEN[n]}">${'€'.repeat(n)}</span>`;
+  const name = stumm ? 'aria-hidden="true"' : `role="img" aria-label="${KOSTEN[n]}"`;
+  return `<span class="geld" title="${KOSTEN[n]}" ${name}>${'€'.repeat(n)}</span>`;
 }
 
 function zielgruppen(wert) {
@@ -164,10 +178,10 @@ function karteBauen(e) {
     : `<span class="leise">${bewertet ? 'laut Bewertung keine' : 'nicht bewertet'}</span>`;
   const steckbrief = steckbriefAdresse(e.steckbrief);
   const kosten = e.kosten && KOSTEN[e.kosten]
-    ? `${geld(e.kosten)} <span class="leise">${KOSTEN[e.kosten]}</span>`
+    ? `${geld(e.kosten, true)} <span class="leise">${KOSTEN[e.kosten]}</span>`
     : '<span class="leise">nicht angegeben</span>';
   const dauer = e.dauer && DAUER[e.dauer]
-    ? `${punkte(e.dauer, DAUER)} ${DAUER[e.dauer]}`
+    ? `${punkte(e.dauer, DAUER, true)} ${DAUER[e.dauer]}`
     : '<span class="leise">nicht angegeben</span>';
   const fuer = e.akteure ? esc(zielgruppen(e.akteure).join(' · ')) : '<span class="leise">nicht angegeben</span>';
 
@@ -188,11 +202,12 @@ function karteBauen(e) {
       (bewertet
         ? `<details class="alle-wirkungen"><summary>Alle Bewertungen</summary><dl>` +
           WIRKUNGEN.map(w => `<div><dt>${w.name} <span class="leise">– ${w.erklaerung}</span></dt>` +
-            `<dd>${e[w.key] !== '' ? `${punkte(e[w.key], STUFE)} ${STUFE[e[w.key]] || esc(e[w.key])}` : '<span class="leise">nicht bewertet</span>'}</dd></div>`).join('') +
+            `<dd>${e[w.key] !== '' ? `${punkte(e[w.key], STUFE, true)} ${STUFE[e[w.key]] || esc(e[w.key])}` : '<span class="leise">nicht bewertet</span>'}</dd></div>`).join('') +
           `</dl></details>`
         : '') +
       (steckbrief
-        ? `<a class="steckbrief-knopf" href="${esc(steckbrief)}" target="_blank" rel="noopener">Steckbrief öffnen (PDF)</a>`
+        ? `<a class="steckbrief-knopf" href="${esc(steckbrief)}" target="_blank" rel="noopener">Steckbrief öffnen (PDF)` +
+          `<span class="unsichtbar">: ${esc(e.name)}</span>${NEUES_FENSTER}</a>`
         : '') +
     `</article>`;
   return li;
@@ -216,7 +231,7 @@ function zeileBauen(e) {
     `<td class="mitte">${geld(e.kosten)}</td>` +
     `<td class="mitte">${punkte(e.dauer, DAUER)}</td>` +
     WIRKUNGEN.map(w => `<td class="mitte">${punkte(e[w.key], STUFE)}</td>`).join('') +
-    `<td class="mitte">${steckbrief ? `<a class="steckbrief" href="${esc(steckbrief)}" target="_blank" rel="noopener" aria-label="Steckbrief ${esc(e.name)} (PDF)">PDF</a>` : STRICH}</td>`;
+    `<td class="mitte">${steckbrief ? `<a class="steckbrief" href="${esc(steckbrief)}" target="_blank" rel="noopener" aria-label="Steckbrief ${esc(e.name)} (PDF, öffnet in neuem Fenster)">PDF</a>` : STRICH}</td>`;
   return tr;
 }
 
@@ -444,7 +459,7 @@ function vergleichsListe() {
 
 function stufeText(wert, woerter) {
   return wert !== '' && woerter[wert]
-    ? `${punkte(wert, woerter)} ${woerter[wert]}`
+    ? `${punkte(wert, woerter, true)} ${woerter[wert]}`
     : '<span class="leise">nicht bewertet</span>';
 }
 
@@ -455,7 +470,7 @@ const VERGLEICH_ZEILEN = [
   { name: 'Für wen', html: e => e.akteure ? esc(zielgruppen(e.akteure).join(', ')) : STRICH },
   { name: 'Kosten', key: 'kosten', besser: 'niedrig',
     html: e => e.kosten && KOSTEN[e.kosten]
-      ? `${geld(e.kosten)} <span class="leise">${KOSTEN[e.kosten]}</span>`
+      ? `${geld(e.kosten, true)} <span class="leise">${KOSTEN[e.kosten]}</span>`
       : '<span class="leise">nicht angegeben</span>' },
   { name: 'Dauer', key: 'dauer', besser: 'niedrig',
     html: e => e.dauer && DAUER[e.dauer] ? stufeText(e.dauer, DAUER) : '<span class="leise">nicht angegeben</span>' },
@@ -464,7 +479,8 @@ const VERGLEICH_ZEILEN = [
     html: e => stufeText(e[w.key], STUFE) })),
   { name: 'Steckbrief', html: e => {
     const a = steckbriefAdresse(e.steckbrief);
-    return a ? `<a class="steckbrief" href="${esc(a)}" target="_blank" rel="noopener">PDF öffnen</a>` : STRICH;
+    return a ? `<a class="steckbrief" href="${esc(a)}" target="_blank" rel="noopener">PDF öffnen` +
+      `<span class="unsichtbar">: Steckbrief ${esc(e.name)}</span>${NEUES_FENSTER}</a>` : STRICH;
   } },
 ];
 
@@ -498,7 +514,10 @@ function vergleichZeichnen() {
     const beste = besteSpalten(z, liste);
     return `<tr><th scope="row">${z.name}` +
       (z.erklaerung ? `<span class="vgl-erklaerung">${z.erklaerung}</span>` : '') + `</th>` +
-      liste.map((e, i) => `<td${beste.has(i) ? ' class="beste"' : ''}>${z.html(e)}</td>`).join('') + `</tr>`;
+      // Hervorhebung nicht nur ueber Farbe: Screenreader hoeren „bester Wert“.
+      liste.map((e, i) => beste.has(i)
+        ? `<td class="beste">${z.html(e)}<span class="unsichtbar"> (bester Wert)</span></td>`
+        : `<td>${z.html(e)}</td>`).join('') + `</tr>`;
   }).join('');
   ziel.innerHTML =
     `<div class="vergleich-rahmen"><table class="vergleich-tabelle">` +
@@ -521,7 +540,8 @@ function merkleisteZeichnen() {
   const zeigen = n > 0 || zustand.vergleich;
   leiste.hidden = !zeigen;
   document.body.classList.toggle('mit-merkleiste', zeigen);
-  document.getElementById('merk-text').textContent = n === 0 ? 'Nichts gemerkt' : `★ ${n} gemerkt`;
+  document.getElementById('merk-text').innerHTML =
+    n === 0 ? 'Nichts gemerkt' : `<span aria-hidden="true">★ </span>${n} gemerkt`;
 
   const nur = document.getElementById('merk-nur');
   nur.hidden = zustand.vergleich;
@@ -529,7 +549,7 @@ function merkleisteZeichnen() {
 
   const vgl = document.getElementById('merk-vergleich');
   if (zustand.vergleich) {
-    vgl.textContent = '← Zurück zur Liste';
+    vgl.innerHTML = '<span aria-hidden="true">← </span>Zurück zur Liste';
     vgl.disabled = false;
     vgl.title = '';
   } else {
@@ -599,7 +619,8 @@ function zeichnen() {
   const anzahl = filterAnzahl();
   const fa = document.getElementById('filter-anzahl');
   fa.hidden = !anzahl;
-  fa.textContent = anzahl;
+  // Sichtbar „Filter 2“, vorgelesen „Filter 2 aktiv“.
+  fa.innerHTML = `${anzahl}<span class="unsichtbar"> aktiv</span>`;
 
   merkleisteZeichnen();
 
@@ -781,15 +802,20 @@ function verdrahten() {
       try { localStorage.setItem(ANSICHT_SCHLUESSEL, zustand.ansicht); } catch { /* egal */ }
       zeichnen();
     }));
+  // Sortierbare Spaltenkoepfe bekommen einen echten Knopf. Eine anklickbare
+  // Zelle erkennen Screenreader nicht als bedienbar; die Richtung sagt
+  // aria-sort an der Zelle.
   document.querySelectorAll('thead th[data-sort]').forEach(th => {
-    th.tabIndex = 0;
-    const sortieren = () => {
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'sortierknopf';
+    knopf.append(...th.childNodes);
+    th.append(knopf);
+    knopf.addEventListener('click', () => {
       const feld = th.dataset.sort;
       zustand.sortierung = { feld, auf: zustand.sortierung.feld === feld ? !zustand.sortierung.auf : true };
       zeichnen();
-    };
-    th.addEventListener('click', sortieren);
-    th.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortieren(); } });
+    });
   });
 
   document.getElementById('merk-nur').addEventListener('click', () => {
