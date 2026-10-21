@@ -526,7 +526,9 @@ tbody tr:hover { background: var(--blau-hell); }
     border-bottom: 0;
     border-radius: 8px 8px 0 0;
     box-shadow: 0 0 0 5px var(--grund);
-    clip-path: inset(-5px -5px 0 -5px);
+    /* Unten 2 px vor der Kante abschneiden: Genau an der Kante liess die
+       Kantenglaettung den Schatten als feine graue Linie im Kopf stehen. */
+    clip-path: inset(-5px -5px 2px -5px);
     pointer-events: none;
   }
   /* Eigener Hintergrund, damit beim Mitlaufen nichts von der Tabelle
