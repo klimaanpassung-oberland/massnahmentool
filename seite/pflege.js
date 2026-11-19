@@ -53,6 +53,7 @@ const zustand = {
   bestandPdf: null,     // Set der Dateinamen in steckbriefe/, null = unbekannt
   neu: null,            // { eintraege, meldungen, datei, csv }
   pdfs: new Map(),      // Dateiname -> File, noch nicht veroeffentlicht
+  zuordnung: new Map(), // Dateiname -> Name der Massnahme ('' = keiner), in Schritt 3 gewaehlt
   nachrichtVonHand: false,
 };
 
@@ -518,8 +519,54 @@ function pruefen() {
 
   neu.eintraege = eintraege;
   neu.meldungen = meldungen;
+  zuordnungAnwenden(eintraege);
   steckbriefePruefen();
   neu.csv = neu.meldungen.some(m => m.art === 'fehler') ? null : csvBauen(eintraege);
+}
+
+/** Vergleichbare Form eines Namens: „Steckbrief_Gründach.pdf“ und
+ *  „Gründach“ ergeben beide „gruendach“. */
+function namensKern(text) {
+  return text.toLowerCase()
+    .replace(/\.pdf$/, '').replace(/^steckbriefe?[\s_-]*/, '')
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/** Traegt die in Schritt 3 gewaehlten Zuordnungen in die Tabelle ein. Fuer
+ *  hochgeladene PDFs, die noch niemandem gehoeren, wird die Massnahme
+ *  vorgeschlagen, deren Name zum Dateinamen passt. Laeuft bei jeder Pruefung
+ *  neu, damit die Wahl auch eine spaeter hochgeladene Excel ueberdauert. */
+function zuordnungAnwenden(eintraege) {
+  for (const datei of zustand.pdfs.keys()) {
+    if (zustand.zuordnung.has(datei) || eintraege.some(e => e.steckbrief === datei)) continue;
+    const kern = namensKern(datei);
+    const treffer = eintraege.filter(e => kern && namensKern(e.name) === kern);
+    if (treffer.length === 1) zustand.zuordnung.set(datei, treffer[0].name);
+  }
+  for (const [datei, name] of zustand.zuordnung) {
+    if (!zustand.pdfs.has(datei)) continue;
+    for (const e of eintraege) {
+      if (e.name === name) e.steckbrief = datei;
+      else if (e.steckbrief === datei) e.steckbrief = '';
+    }
+  }
+}
+
+/** Ohne hochgeladene Excel arbeitet die Zuordnung auf dem veroeffentlichten
+ *  Stand. */
+function neuAusStand() {
+  if (zustand.neu || !zustand.stand) return;
+  const roh = { blatt: null, zeilen: csvZerlegen(zustand.stand.text.replace(/^﻿/, ''))
+    .map((werte, i) => ({ nr: i + 1, werte, links: [] })) };
+  zustand.neu = { roh, datei: 'Veröffentlichter Stand', blatt: null };
+}
+
+function steckbriefZuordnen(datei, name) {
+  zustand.zuordnung.set(datei, name);
+  neuAusStand();
+  if (zustand.neu) pruefen();
+  zeichnen();
 }
 
 /** Gleicht die Spalte Steckbrief mit den vorhandenen und den gerade
@@ -673,19 +720,38 @@ function pdfsZeichnen() {
   const zeilen = [...zustand.pdfs.values()].map(datei => {
     const nutzer = tabelle.filter(e => e.steckbrief === datei.name).map(e => e.name);
     const ersetzt = zustand.bestandPdf && zustand.bestandPdf.has(datei.name);
+    // Auswahl unter allen Massnahmen der Tabelle, die veroeffentlicht wird
+    const auswahl = el('select', {
+      'aria-label': `Maßnahme zum Steckbrief ${datei.name}`,
+      onchange: ev => steckbriefZuordnen(datei.name, ev.target.value),
+    },
+      el('option', { value: '' }, tabelle.length ? '— bitte Maßnahme wählen —' : '— erst Tabelle hochladen oder verbinden —'),
+      tabelle.map(e => {
+        const anderer = e.steckbrief && e.steckbrief !== datei.name ? ` (bisher ${e.steckbrief})` : '';
+        const o = el('option', { value: e.name }, e.name + anderer);
+        if (e.name === nutzer[0]) o.selected = true;
+        return o;
+      }));
+    if (!tabelle.length) auswahl.disabled = true;
     return el('tr', {},
       el('td', {}, datei.name),
       el('td', { class: 'zahl' }, groesse(datei.size)),
       el('td', {}, ersetzt ? 'ersetzt die vorhandene Datei' : 'neu'),
-      el('td', { 'data-art': nutzer.length ? '' : 'warnung' },
-        nutzer.length ? nutzer.join(', ') : 'in der Tabelle nirgends eingetragen'),
+      el('td', { 'data-art': nutzer.length ? '' : 'warnung' }, auswahl,
+        nutzer.length > 1 ? el('small', { class: 'leise' }, ` auch bei: ${nutzer.slice(1).join(', ')}`) : null,
+        nutzer.length ? null : el('small', { class: 'leise' }, ' noch keiner Maßnahme zugeordnet')),
       el('td', {}, el('button', {
         type: 'button', class: 'knopf-schlicht',
-        onclick: () => { zustand.pdfs.delete(datei.name); steckbriefePruefen(); zeichnen(); },
+        onclick: () => {
+          zustand.pdfs.delete(datei.name);
+          zustand.zuordnung.delete(datei.name);
+          if (zustand.neu) pruefen();
+          zeichnen();
+        },
       }, 'entfernen')));
   });
   ziel.replaceChildren(el('table', { class: 'pdf-tabelle' },
-    el('thead', {}, el('tr', {}, ['Datei', 'Größe', 'Status', 'Verwendet bei', ''].map(t => el('th', { scope: 'col' }, t)))),
+    el('thead', {}, el('tr', {}, ['Datei', 'Größe', 'Status', 'Gehört zu Maßnahme', ''].map(t => el('th', { scope: 'col' }, t)))),
     el('tbody', {}, zeilen)));
 }
 
@@ -759,7 +825,8 @@ async function pdfsAufnehmen(dateien) {
     abgelehnt.length ? `Nicht übernommen: ${abgelehnt.join(', ')}.` : '',
     gross.length ? `Sehr groß, besser verkleinern: ${gross.join(', ')}.` : '',
   ].filter(Boolean).join(' ') || `${zustand.pdfs.size} PDF zum Hochladen vorgemerkt.`;
-  steckbriefePruefen();
+  neuAusStand();
+  if (zustand.neu) pruefen();
   zeichnen();
 }
 
@@ -986,6 +1053,7 @@ async function veroeffentlichen() {
       el('a', { href: commit.html_url || `${REPO_URL}/commit/${commit.sha}`, target: '_blank', rel: 'noopener' },
         'Änderung auf GitHub ansehen'));
     zustand.pdfs.clear();
+    zustand.zuordnung.clear();
     zustand.neu = null;
     zustand.nachrichtVonHand = false;
     $('nachricht').value = '';

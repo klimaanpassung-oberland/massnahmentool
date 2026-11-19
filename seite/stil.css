@@ -892,6 +892,9 @@ code { font-size: .88em; background: var(--grund); padding: 1px 4px; border-radi
 .pdf-tabelle thead th { cursor: default; position: static; }
 .pdf-tabelle td[data-art="warnung"] { color: var(--warn); }
 .pdf-tabelle .zahl { white-space: nowrap; text-align: right; }
+.pdf-tabelle select { width: 100%; max-width: 24rem; min-width: 12rem; font: inherit; padding: 4px 6px; color: var(--text, inherit); }
+.pdf-tabelle td:first-child { overflow-wrap: break-word; word-break: normal; }
+.pdf-tabelle td small { display: block; margin-top: 2px; }
 
 .bestaetigen {
   display: flex !important;
