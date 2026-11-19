@@ -365,9 +365,13 @@ function filterAufbauen() {
   bauen('art', ARTEN, e => (e.art ? [e.art] : []), artText);
 }
 
+/** Mehrere Ereignisse: nur Massnahmen, die alle gewaehlten abdecken
+ *  (Hitze und Starkregen = Schnittmenge). Massnahmen fuer „Klimaanpassung
+ *  allgemein“ sind immer dabei. */
 function passtEreignis(e, wahl) {
-  if (!wahl.length) return true;
-  return e.ereignisse.some(t => wahl.includes(t)) || e.ereignisse.includes(ALLGEMEIN);
+  if (!wahl.length || e.ereignisse.includes(ALLGEMEIN)) return true;
+  const konkret = wahl.filter(t => t !== ALLGEMEIN);
+  return konkret.length > 0 && konkret.every(t => e.ereignisse.includes(t));
 }
 
 function passtAkteur(wert, wahl) {
