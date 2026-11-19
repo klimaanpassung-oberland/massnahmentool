@@ -582,7 +582,13 @@ tbody tr:hover { background: var(--blau-hell); }
    ab, die an Wortgrenzen umbrechen. */
 @media screen and (min-width: 1150px) {
   #tabelle thead th.mitte { white-space: nowrap; }
-  #tabelle td.spalte-name { min-width: 170px; }
+  /* Massnahme schmaler (darf mehrzeilig werden), Extremwetterereignis
+     breiter, damit die Marken nicht umbrechen. */
+  #tabelle td.spalte-name { width: auto; min-width: 0; }
+  /* Feste Breite am Text: sonst haelt der Browser die Spalte so breit wie
+     das laengste Wort, statt es zu trennen. */
+  #tabelle td.spalte-name .name-text { display: block; width: 140px; overflow-wrap: break-word; }
+  #tabelle td.spalte-ereignis .zellmarken { max-width: 125px; }
 }
 #tabelle .punkte { font-size: .82rem; }
 .spalte-merken { width: 36px; padding: 2px 0 2px 4px !important; }

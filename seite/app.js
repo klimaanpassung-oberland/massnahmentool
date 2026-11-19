@@ -118,8 +118,18 @@ const NEUES_FENSTER = '<span class="unsichtbar"> (öffnet in neuem Fenster)</spa
 
 /** Name zum Anzeigen: nach einem Schraegstrich darf umbrochen werden, sonst
  *  sprengt etwa „Kaltluftentstehungsgebieten/Frischluftschneisen“ die Spalte. */
+// Wortteile, vor denen lange Woerter getrennt werden duerfen. Nicht jeder
+// Browser bringt eine deutsche Silbentrennung mit; ohne sie hielte
+// „Elementarschadenversicherung“ die schmale Namensspalte breit.
+const WORTFUGEN = ['versicherung', 'veranstaltung', 'angebot', 'schaden', 'anpassung',
+  'rückhalte', 'becken', 'nutzung', 'bewirtschaftung', 'begrünung', 'verschattung',
+  'beschattung', 'oberflächen', 'wasser', 'mulden', 'rigolen', 'systeme', 'gebäude',
+  'pflicht', 'versickerung', 'entsiegelung', 'schutz', 'konzept', 'planung', 'flächen'];
+const FUGE = new RegExp(String.raw`(?<=\p{L}{3})(?=(${WORTFUGEN.join('|')}))`, 'giu');
+
 function nameHtml(name) {
-  return esc(name).replace(/\//g, '/<wbr>');
+  return esc(name).replace(/\//g, '/<wbr>')
+    .replace(/\p{L}{14,}/gu, wort => wort.replace(FUGE, '&shy;'));
 }
 
 /** „baulich - grau“ wird als „baulich – grau“ gezeigt; gefiltert wird mit
@@ -263,8 +273,8 @@ function karteBauen(e) {
 function tabellenSpalten() {
   return [
     { klasse: 'merken', kopf: '<span class="unsichtbar">Merken</span>', zelle: e => merkKnopf(e), td: 'spalte-merken' },
-    { klasse: 'name', kopf: 'Maßnahme', sort: 'name', zelle: e => nameHtml(e.name), td: 'spalte-name' },
-    { klasse: 'ereignis', kopf: 'Extrem&shy;wetter&shy;ereignis', sort: 'ereignis',
+    { klasse: 'name', kopf: 'Maßnahme', sort: 'name', zelle: e => `<span class="name-text">${nameHtml(e.name)}</span>`, td: 'spalte-name' },
+    { klasse: 'ereignis', kopf: 'Extrem&shy;wetter&shy;ereignis', sort: 'ereignis', td: 'spalte-ereignis',
       zelle: e => e.ereignisse.length ? `<div class="zellmarken">${ereignisMarken(e)}</div>` : STRICH },
     { klasse: 'art', kopf: 'Art', sort: 'art', zelle: e => e.art ? esc(artText(e.art)) : STRICH },
     { klasse: 'akteur', kopf: 'Umsetzender Akteur', sort: 'akteur', zelle: e => akteurMarken(e.akteur) },
