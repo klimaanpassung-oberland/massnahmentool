@@ -727,6 +727,20 @@ function filterModusSetzen() {
   if (!fenster) filterSchliessen();
 }
 
+/** Marken (Kommunen, Privathaushalte, Klimaanpassung allgemein …) stehen
+ *  einzeilig, wenn die Tabelle dann noch ohne Querscrollen passt; sonst
+ *  brechen sie um. Ausprobieren ist verlaesslicher als eine feste Breite,
+ *  weil der Platz von Fenster, Filterleiste und den gezeigten Zeilen abhaengt. */
+let markenBreite = 0;
+function markenEinpassen() {
+  const rahmen = document.getElementById('tabelle-rahmen');
+  const tabelle = document.getElementById('tabelle');
+  if (rahmen.hidden) return;
+  tabelle.classList.add('marken-einzeilig');
+  if (tabelle.scrollWidth > rahmen.clientWidth + 1) tabelle.classList.remove('marken-einzeilig');
+  markenBreite = rahmen.clientWidth;
+}
+
 function zeichnen() {
   const treffer = sortieren(gefiltert());
   const vergleich = zustand.vergleich;
@@ -742,7 +756,10 @@ function zeichnen() {
   tabelle.hidden = !tabelleZeigen;
   document.getElementById('vergleich').hidden = !vergleich;
   if (karten) liste.replaceChildren(...treffer.map(karteBauen));
-  else if (tabelleZeigen) document.getElementById('koerper').replaceChildren(...treffer.map(zeileBauen));
+  else if (tabelleZeigen) {
+    document.getElementById('koerper').replaceChildren(...treffer.map(zeileBauen));
+    markenEinpassen();
+  }
   else vergleichZeichnen();
 
   const n = treffer.length;
@@ -1025,6 +1042,10 @@ function hoeheMelden() {
 
 if (window.parent !== window) {
   new ResizeObserver(hoeheMelden).observe(document.body);
+  // Nur bei geaenderter Breite neu einpassen, nicht bei jeder Hoehe.
+  new ResizeObserver(() => {
+    if (document.getElementById('tabelle-rahmen').clientWidth !== markenBreite) markenEinpassen();
+  }).observe(document.getElementById('tabelle-rahmen'));
   window.addEventListener('load', hoeheMelden);
 }
 
