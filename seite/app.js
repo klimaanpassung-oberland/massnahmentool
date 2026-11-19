@@ -34,8 +34,8 @@ const WIRKUNGEN = [
 // Extremwetterereignisse und Arten in der Reihenfolge der Filter. Neue Werte
 // aus der Tabelle kommen ans Ende -- die Filter wachsen mit den Daten.
 const EREIGNISSE = ['Hitze', 'Starkregen', 'Dürre', 'Hochwasser', 'Klimaanpassung allgemein'];
-// Massnahmen fuer „Klimaanpassung allgemein“ gelten fuer jedes Ereignis und
-// erscheinen bei jedem Ereignisfilter mit.
+// Massnahmen fuer „Klimaanpassung allgemein“ erscheinen nur, wenn dieser
+// Haken gesetzt ist.
 const ALLGEMEIN = 'Klimaanpassung allgemein';
 const ARTEN = ['baulich - grau', 'baulich - blau-grün', 'planerisch', 'administrativ',
                'Information', 'Anreizsystem', 'Risikotransfer'];
@@ -367,9 +367,10 @@ function filterAufbauen() {
 
 /** Mehrere Ereignisse: nur Massnahmen, die alle gewaehlten abdecken
  *  (Hitze und Starkregen = Schnittmenge). Massnahmen fuer „Klimaanpassung
- *  allgemein“ sind immer dabei. */
+ *  allgemein“ erscheinen nur, wenn dieser Haken gesetzt ist. */
 function passtEreignis(e, wahl) {
-  if (!wahl.length || e.ereignisse.includes(ALLGEMEIN)) return true;
+  if (!wahl.length) return true;
+  if (e.ereignisse.includes(ALLGEMEIN)) return wahl.includes(ALLGEMEIN);
   const konkret = wahl.filter(t => t !== ALLGEMEIN);
   return konkret.length > 0 && konkret.every(t => e.ereignisse.includes(t));
 }
