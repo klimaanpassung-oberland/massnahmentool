@@ -25,6 +25,14 @@
   --pfeil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%231a1a1a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --hitze: #b4441f;
   --hitze-hell: #fbe9e4;
+  /* Weitere Extremwetterereignisse (Kontrast Text/Grund jeweils ueber 6:1) */
+  --duerre: #7a4f00;
+  --duerre-hell: #fbf0d6;
+  --hochwasser: #0b5f69;
+  --hochwasser-hell: #dff1f3;
+  --allgemein: #4a5058;
+  --allgemein-hell: #eceef1;
+  --gut: #1d7a46;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +55,13 @@
     --pfeil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23e8eaed' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     --hitze: #f39a7e;
     --hitze-hell: #3a2220;
+    --duerre: #e9bf6e;
+    --duerre-hell: #3a2f18;
+    --hochwasser: #7fd3db;
+    --hochwasser-hell: #14353a;
+    --allgemein: #c3c9d0;
+    --allgemein-hell: #2b3038;
+    --gut: #6cc596;
   }
 }
 
@@ -439,7 +454,12 @@ body:not(.pflege) .kopf { position: sticky; top: 0; z-index: 10; }
 }
 .marke-hitze { background: var(--hitze-hell); color: var(--hitze); font-weight: 500; }
 .marke-regen { background: var(--blau-hell); color: var(--blau-tief); font-weight: 500; }
+.marke-duerre { background: var(--duerre-hell); color: var(--duerre); font-weight: 500; }
+.marke-hochwasser { background: var(--hochwasser-hell); color: var(--hochwasser); font-weight: 500; }
+.marke-allgemein { background: var(--allgemein-hell); color: var(--allgemein); font-weight: 500; }
 .marke-leer { background: none; border: 1px dashed var(--linie); }
+.marke-planung { background: none; border: 1px solid var(--gut); color: var(--gut); font-weight: 500; }
+.haken-planung { color: var(--gut); font-weight: 700; font-size: 1.05em; }
 
 /* ---------- Tabelle ---------- */
 
@@ -486,7 +506,7 @@ tbody tr:hover { background: var(--blau-hell); }
    seitliches Wischen auf einen Bildschirm passen: Name bricht um,
    Ueberschriften duerfen trennen, Marken stehen untereinander. */
 #tabelle { font-size: .84rem; }
-#tabelle th, #tabelle td { padding: 6px 6px; }
+#tabelle th, #tabelle td { padding: 6px 5px; }
 #tabelle thead th {
   text-transform: none;
   letter-spacing: 0;
@@ -548,10 +568,15 @@ tbody tr:hover { background: var(--blau-hell); }
   #tabelle thead th.gruppe { box-shadow: inset 0 -1px 0 var(--linie); }
 }
 #tabelle .mitte { text-align: center; }
-#tabelle td.spalte-name { font-weight: 500; width: 240px; min-width: 200px; hyphens: auto; }
+#tabelle td.spalte-name { font-weight: 500; width: 220px; min-width: 180px; hyphens: auto; }
 #tabelle td { vertical-align: middle; }
 .zellmarken { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
 #tabelle .marke { font-size: .74rem; padding: 0 6px; }
+/* Lange Marken („Klimaanpassung allgemein“, „Privathaushalte“) brechen in
+   der Tabelle um, statt ihre Spalte aufzublaehen -- sonst passt die Tabelle
+   bei 1024 px nicht mehr auf den Bildschirm. */
+#tabelle .zellmarken { max-width: 80px; }
+#tabelle .zellmarken .marke { white-space: normal; hyphens: auto; line-height: 1.3; padding: 1px 6px; }
 #tabelle .punkte { font-size: .82rem; }
 .spalte-merken { width: 36px; padding: 2px 0 2px 4px !important; }
 .spalte-merken .merken { margin: 0; width: 32px; height: 32px; font-size: 1.15rem; }
@@ -1146,13 +1171,16 @@ body.filter-als-fenster.filter-offen .filter { transform: none; visibility: visi
   #tabelle { table-layout: fixed; }
   #tabelle td.spalte-name { width: auto; min-width: 0; }
   .sp-merken { width: 0; }
-  .sp-name { width: 24%; }
-  .sp-risiko { width: 9%; }
-  .sp-art { width: 9%; }
-  .sp-fuer { width: 9.5%; }
-  .sp-kosten { width: 5.5%; }
-  .sp-dauer { width: 6.5%; }
-  .sp-wirkung { width: 6.5%; }
+  .sp-name { width: 19%; }
+  .sp-ereignis { width: 10%; }
+  .sp-art { width: 8.5%; }
+  .sp-akteur { width: 8.5%; }
+  .sp-planung { width: 4.5%; }
+  .sp-zielgruppe { width: 8.5%; }
+  .sp-kosten { width: 5%; }
+  .sp-dauer { width: 6%; }
+  .sp-wirkung { width: 6%; }
+  .sp-synergien { width: 6%; }
   .sp-steckbrief { width: 4%; }
   /* Die Merken-Spalte bleibt als Zelle stehen, nur ohne Breite und Inhalt --
      faellt sie ganz weg, verrutschen alle Breiten um eine Spalte. */

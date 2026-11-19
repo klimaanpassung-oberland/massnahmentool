@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Maßnahmen pflegen</title>
-<link rel="stylesheet" href="seite/stil.css?v=85a7d82">
+<link rel="stylesheet" href="seite/stil.css?v=0bfd4c1">
 <!-- Wie das Tool, mit Stift-Abzeichen: im Tab sofort als Pflegeseite zu
      erkennen. -->
 <link rel="icon" type="image/png" sizes="32x32" href="seite/bilder/pflege-favicon-32.png">
@@ -81,9 +81,11 @@
     <p id="tabelle-status" class="status" role="status"></p>
 
     <details class="anleitung">
-      <summary>Was in die Spalte „Steckbrief“ gehört</summary>
+      <summary>Was in die Spalte „Pdf“ gehört</summary>
+      <p>Die Spalte „Steckbrief“ mit Ja/Nein dient nur der Übersicht; die Seite
+         richtet sich nach „Pdf“.</p>
       <ul>
-        <li><b>Ein Dateiname</b> wie <code>Gruendach.pdf</code> — die Datei liegt
+        <li><b>Ein Dateiname</b> wie <code>Steckbrief_Zisternen.pdf</code> — die Datei liegt
             dann im Repository im Ordner <code>steckbriefe/</code>
             (in Schritt 3 hochladen). Groß- und Kleinschreibung zählt.</li>
         <li><b>Oder ein vollständiger Link</b> wie
@@ -101,7 +103,7 @@
     <label class="ablage" id="ablage-pdf">
       <input type="file" id="datei-pdf" accept=".pdf,application/pdf" multiple>
       <span><b>PDF-Dateien hierher ziehen</b> oder klicken zum Auswählen<br>
-            <small>Der Dateiname muss so lauten wie in der Spalte „Steckbrief“.</small></span>
+            <small>Der Dateiname muss so lauten wie in der Spalte „Pdf“.</small></span>
     </label>
     <div id="pdf-liste"></div>
     <p id="pdf-bestand" class="status leise"></p>
@@ -153,8 +155,8 @@
   </section>
 </main>
 
-<script src="seite/csv.js?v=85a7d82"></script>
-<script src="seite/xlsx.js?v=85a7d82"></script>
-<script src="seite/pflege.js?v=85a7d82"></script>
+<script src="seite/csv.js?v=0bfd4c1"></script>
+<script src="seite/xlsx.js?v=0bfd4c1"></script>
+<script src="seite/pflege.js?v=0bfd4c1"></script>
 </body>
 </html>

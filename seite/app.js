@@ -6,23 +6,40 @@
 // mitschneiden kann.
 
 const DATEI = 'daten/massnahmen.csv';
+// Liste der hochgeladenen Steckbriefe, beim Veroeffentlichen geschrieben
+// (werkzeuge/vorab.py). Fehlt sie -- etwa in der oertlichen Vorschau --,
+// gilt jeder eingetragene Steckbrief als vorhanden.
+const STECKBRIEF_LISTE = 'daten/steckbriefe.json';
 
-// Die Spalten der CSV in der Reihenfolge, in der sie dort stehen.
-const SPALTEN = ['name', 'hazard', 'art', 'akteure', 'kosten', 'dauer',
-                 'rueckhalt', 'ableitung', 'versickerung', 'kuehlung',
-                 'aufwertung', 'steckbrief'];
+// Die Spalten der CSV in der Reihenfolge, in der sie dort stehen, und ihre
+// Ueberschriften (fuer den CSV-Export).
+const SPALTEN = ['name', 'ereignis', 'art', 'akteur', 'planung', 'zielgruppe', 'kosten', 'dauer',
+                 'rueckhalt', 'ableitung', 'versickerung', 'kuehlung', 'synergien', 'steckbrief'];
+const CSV_KOPF = ['Maßnahme', 'Extremwetterereignis', 'Art', 'Umsetzender Akteur', 'Planung',
+                  'Zu erreichende Zielgruppe', 'Kosten', 'Umsetzungsdauer',
+                  'Wirksamkeit - Rückhalt', 'Wirksamkeit - Ableitung', 'Wirksamkeit - Versickerung',
+                  'Wirksamkeit - Kühlung', 'Synergien', 'Steckbrief'];
 
 const STUFE = { '0': 'keine', '1': 'gering', '2': 'mittel', '3': 'hoch' };
 const DAUER = { '1': 'kurz', '2': 'mittel', '3': 'lang' };
 const KOSTEN = { '1': 'bis 20.000 €', '2': '20.000 bis 100.000 €', '3': 'über 100.000 €' };
-const ZIELGRUPPE = { K: 'Kommunen', U: 'Unternehmen', P: 'Haushalte' };
+const AKTEUR = { K: 'Kommunen', U: 'Unternehmen', P: 'Privathaushalte' };
 const WIRKUNGEN = [
-  { key: 'rueckhalt', name: 'Rückhalt', erklaerung: 'hält Regenwasser zurück' },
-  { key: 'ableitung', name: 'Ableitung', erklaerung: 'leitet Wasser schadlos ab' },
-  { key: 'versickerung', name: 'Versickerung', erklaerung: 'lässt Wasser im Boden versickern' },
-  { key: 'kuehlung', name: 'Kühlung', erklaerung: 'senkt die Temperatur' },
-  { key: 'aufwertung', name: 'Stadtstruktur', erklaerung: 'wertet Ort und Stadtbild auf' },
+  { key: 'rueckhalt', name: 'Rückhalt', kurz: 'Rück&shy;halt', erklaerung: 'hält Regenwasser zurück' },
+  { key: 'ableitung', name: 'Ableitung', kurz: 'Ab&shy;leitung', erklaerung: 'leitet Wasser schadlos ab' },
+  { key: 'versickerung', name: 'Versickerung', kurz: 'Versicke&shy;rung', erklaerung: 'lässt Wasser im Boden versickern' },
+  { key: 'kuehlung', name: 'Kühlung', kurz: 'Küh&shy;lung', erklaerung: 'senkt die Temperatur' },
 ];
+
+// Extremwetterereignisse und Arten in der Reihenfolge der Filter. Neue Werte
+// aus der Tabelle kommen ans Ende -- die Filter wachsen mit den Daten.
+const EREIGNISSE = ['Hitze', 'Starkregen', 'Dürre', 'Hochwasser', 'Klimaanpassung allgemein'];
+// Massnahmen fuer „Klimaanpassung allgemein“ gelten fuer jedes Ereignis und
+// erscheinen bei jedem Ereignisfilter mit.
+const ALLGEMEIN = 'Klimaanpassung allgemein';
+const ARTEN = ['baulich - grau', 'baulich - blau-grün', 'planerisch', 'administrativ',
+               'Information', 'Anreizsystem', 'Risikotransfer'];
+const EREIGNIS_KLASSE = { Hitze: 'hitze', Starkregen: 'regen', Dürre: 'duerre', Hochwasser: 'hochwasser', [ALLGEMEIN]: 'allgemein' };
 
 // Am Desktop startet die Seite immer mit der Tabelle (auf dem Handy immer
 // Kacheln). Umschalten gilt fuer den Besuch, nicht dauerhaft -- sonst
@@ -31,15 +48,16 @@ const WIRKUNGEN = [
 const STANDARD_ANSICHT = 'tabelle';
 
 // Wie die Auswahl „Sortieren“ ordnet: Kosten und Dauer niedrig zuerst,
-// Wirkungen hoch zuerst.
-const SORTIER_RICHTUNG = { name: true, kosten: true, dauer: true, hazard: true, art: true, akteure: true };
+// Wirkungen und Synergien hoch zuerst.
+const SORTIER_RICHTUNG = { name: true, kosten: true, dauer: true, ereignis: true, art: true, akteur: true, zielgruppe: true };
+const TEXTFELDER = ['name', 'ereignis', 'art', 'akteur', 'zielgruppe'];
 
 // Schmal = Handy. Gleiche Grenze wie in stil.css. Nur auf dem Bildschirm:
 // Beim Drucken ist ein A4-Blatt ebenfalls schmaler als 860 px, und ohne
 // „screen“ schaltete die Seite mitten im Druck auf Kacheln um.
 const SCHMAL = window.matchMedia('screen and (max-width: 860px)');
 // Ab dieser Breite passt die Tabelle neben die Filterleiste.
-const BREIT = window.matchMedia('screen and (min-width: 1300px)');
+const BREIT = window.matchMedia('screen and (min-width: 1440px)');
 
 const zustand = {
   sortierung: { feld: null, auf: true },
@@ -55,6 +73,10 @@ const zustand = {
 // Mehr Spalten werden auch am Desktop unuebersichtlich.
 const MAX_VERGLEICH = 6;
 let alle = [];
+// Wirksamkeits-Spalten mit mindestens einem Wert; ganz leere werden nicht
+// gezeigt (derzeit die Kuehlung) und erscheinen, sobald ein Wert dazukommt.
+let wirkungenMitWert = WIRKUNGEN;
+let vorhandeneSteckbriefe = null;   // Set der Dateinamen, null = unbekannt
 
 // ---------------------------------------------------------------- CSV lesen
 
@@ -73,6 +95,7 @@ function einlesen(text) {
       const eintrag = {};
       SPALTEN.forEach((s, i) => { eintrag[s] = (z[i] || '').trim(); });
       eintrag.id = kennung(eintrag.name);
+      eintrag.ereignisse = eintrag.ereignis ? eintrag.ereignis.split(/\s*&\s*/).filter(Boolean) : [];
       return eintrag;
     });
 }
@@ -97,6 +120,12 @@ const NEUES_FENSTER = '<span class="unsichtbar"> (öffnet in neuem Fenster)</spa
  *  sprengt etwa „Kaltluftentstehungsgebieten/Frischluftschneisen“ die Spalte. */
 function nameHtml(name) {
   return esc(name).replace(/\//g, '/<wbr>');
+}
+
+/** „baulich - grau“ wird als „baulich – grau“ gezeigt; gefiltert wird mit
+ *  dem Wert aus der Tabelle. */
+function artText(art) {
+  return art.replace(/ - /g, ' – ');
 }
 
 /** Bewertung als drei Punkte. Fuer Screenreader ist das ein Bild mit dem
@@ -124,8 +153,21 @@ function geld(wert, stumm = false) {
   return `<span class="geld" title="${KOSTEN[n]}" ${name}>${'€'.repeat(n)}</span>`;
 }
 
-function zielgruppen(wert) {
-  return wert.split('').map(b => ZIELGRUPPE[b] || b);
+function akteure(wert) {
+  return wert.split('').map(b => AKTEUR[b] || b);
+}
+
+function akteurMarken(wert) {
+  return wert
+    ? `<div class="zellmarken">${akteure(wert).map(z => `<span class="marke">${esc(z)}</span>`).join('')}</div>`
+    : STRICH;
+}
+
+/** Planung: Haken bei 1, sonst nichts. */
+function planungHaken(wert) {
+  return wert === '1'
+    ? '<span class="haken-planung" role="img" aria-label="ja" title="ja">✓</span>'
+    : '<span class="unsichtbar">nein</span>';
 }
 
 function textOderStrich(wert) {
@@ -134,20 +176,20 @@ function textOderStrich(wert) {
 
 /** Ein Steckbrief ist entweder ein Dateiname im Ordner steckbriefe/ oder ein
  *  vollstaendiger Link auf eine Datei anderswo. Andere Adressarten (etwa
- *  javascript:) werden nicht verlinkt. */
+ *  javascript:) werden nicht verlinkt, ebenso wenig Dateien, die noch nicht
+ *  hochgeladen sind -- der Link fuehrte sonst ins Leere. */
 function steckbriefAdresse(wert) {
   if (!wert) return null;
   if (/^https?:\/\//i.test(wert)) return wert;
-  if (/^[^/\\:]+$/.test(wert)) return 'steckbriefe/' + encodeURIComponent(wert);
-  return null;
+  if (!/^[^/\\:]+$/.test(wert)) return null;
+  if (vorhandeneSteckbriefe && !vorhandeneSteckbriefe.has(wert)) return null;
+  return 'steckbriefe/' + encodeURIComponent(wert);
 }
 
-function risikoMarken(hazard) {
-  if (!hazard) return '<span class="marke marke-leer">Risiko nicht angegeben</span>';
-  return hazard.split(/\s*&\s*/).map(r => {
-    const art = /hitze/i.test(r) ? 'hitze' : /starkregen/i.test(r) ? 'regen' : 'sonst';
-    return `<span class="marke marke-${art}">${esc(r)}</span>`;
-  }).join(' ');
+function ereignisMarken(e) {
+  if (!e.ereignisse.length) return '<span class="marke marke-leer">nicht angegeben</span>';
+  return e.ereignisse.map(r =>
+    `<span class="marke marke-${EREIGNIS_KLASSE[r] || 'sonst'}">${esc(r)}</span>`).join(' ');
 }
 
 function merkKnopf(e) {
@@ -167,36 +209,39 @@ function karteBauen(e) {
   const li = document.createElement('li');
   li.className = 'karte';
   const st = staerken(e);
-  const bewertet = WIRKUNGEN.some(w => e[w.key] !== '');
+  const bewertet = WIRKUNGEN.some(w => e[w.key] !== '') || e.synergien !== '';
   const wirkung = st.length
     ? st.map(w => `<span class="wirkung"><span class="wirkung-name">${w.name}</span> ${STUFE[e[w.key]]}</span>`).join('')
-    : `<span class="leise">${bewertet ? 'laut Bewertung keine' : 'nicht bewertet'}</span>`;
+    : `<span class="leise">${WIRKUNGEN.some(w => e[w.key] !== '') ? 'laut Bewertung keine' : 'nicht bewertet'}</span>`;
   const steckbrief = steckbriefAdresse(e.steckbrief);
+  const nichtAngegeben = '<span class="leise">nicht angegeben</span>';
   const kosten = e.kosten && KOSTEN[e.kosten]
-    ? `${geld(e.kosten, true)} <span class="leise">${KOSTEN[e.kosten]}</span>`
-    : '<span class="leise">nicht angegeben</span>';
+    ? `${geld(e.kosten, true)} <span class="leise">${KOSTEN[e.kosten]}</span>` : nichtAngegeben;
   const dauer = e.dauer && DAUER[e.dauer]
-    ? `${punkte(e.dauer, DAUER, true)} ${DAUER[e.dauer]}`
-    : '<span class="leise">nicht angegeben</span>';
-  const fuer = e.akteure ? esc(zielgruppen(e.akteure).join(' · ')) : '<span class="leise">nicht angegeben</span>';
+    ? `${punkte(e.dauer, DAUER, true)} ${DAUER[e.dauer]}` : nichtAngegeben;
+  const fakt = (titel, inhalt) => `<div><dt>${titel}</dt><dd>${inhalt}</dd></div>`;
 
   li.innerHTML =
     `<article aria-labelledby="k-${esc(e.id)}">` +
       `<div class="karte-kopf">` +
         `<h3 id="k-${esc(e.id)}">${nameHtml(e.name)}</h3>${merkKnopf(e)}` +
       `</div>` +
-      `<p class="karte-marken">${risikoMarken(e.hazard)}` +
-        (e.art ? ` <span class="karte-art">${esc(e.art)}</span>` : '') + `</p>` +
+      `<p class="karte-marken">${ereignisMarken(e)}` +
+        (e.art ? ` <span class="karte-art">${esc(artText(e.art))}</span>` : '') +
+        (e.planung === '1' ? ' <span class="marke marke-planung">✓ Planung</span>' : '') + `</p>` +
       `<dl class="fakten">` +
-        `<div><dt>Kosten</dt><dd>${kosten}</dd></div>` +
-        `<div><dt>Dauer</dt><dd>${dauer}</dd></div>` +
-        `<div><dt>Wirkung</dt><dd class="wirkungen">${wirkung}</dd></div>` +
-        `<div><dt>Für</dt><dd>${fuer}</dd></div>` +
+        fakt('Kosten', kosten) +
+        fakt('Dauer', dauer) +
+        fakt('Wirk&shy;samkeit', `<span class="wirkungen">${wirkung}</span>`) +
+        (e.synergien !== '' && e.synergien !== '0' ? fakt('Synergien', `${punkte(e.synergien, STUFE, true)} ${STUFE[e.synergien] || esc(e.synergien)}`) : '') +
+        fakt('Umsetzung', e.akteur ? esc(akteure(e.akteur).join(' · ')) : nichtAngegeben) +
+        (e.zielgruppe ? fakt('Zielgruppe', esc(akteure(e.zielgruppe).join(' · '))) : '') +
       `</dl>` +
       // Ist gar nichts bewertet, gibt es auch nichts aufzuklappen.
       (bewertet
         ? `<details class="alle-wirkungen"><summary>Alle Bewertungen</summary><dl>` +
-          WIRKUNGEN.map(w => `<div><dt>${w.name} <span class="leise">– ${w.erklaerung}</span></dt>` +
+          [...WIRKUNGEN, { key: 'synergien', name: 'Synergien', erklaerung: 'zusätzlicher Nutzen' }]
+            .map(w => `<div><dt>${w.name} <span class="leise">– ${w.erklaerung}</span></dt>` +
             `<dd>${e[w.key] !== '' ? `${punkte(e[w.key], STUFE, true)} ${STUFE[e[w.key]] || esc(e[w.key])}` : '<span class="leise">nicht bewertet</span>'}</dd></div>`).join('') +
           `</dl></details>`
         : '') +
@@ -210,34 +255,75 @@ function karteBauen(e) {
   return li;
 }
 
-/** Kompakte Zeile: Name darf umbrechen, Risiko und Zielgruppe stehen als
- *  kleine Marken untereinander -- so passen alle Spalten auf einen Bildschirm. */
+// ---------------------------------------------------------------- Tabelle
+
+/** Spalten der Tabelle, wie in der Excel des Projekts angeordnet. Kopf und
+ *  Spaltenbreiten (colgroup, fuer den Druck) entstehen daraus; ganz leere
+ *  Wirksamkeits-Spalten fallen weg. */
+function tabellenSpalten() {
+  return [
+    { klasse: 'merken', kopf: '<span class="unsichtbar">Merken</span>', zelle: e => merkKnopf(e), td: 'spalte-merken' },
+    { klasse: 'name', kopf: 'Maßnahme', sort: 'name', zelle: e => nameHtml(e.name), td: 'spalte-name' },
+    { klasse: 'ereignis', kopf: 'Extrem&shy;wetter&shy;ereignis', sort: 'ereignis',
+      zelle: e => e.ereignisse.length ? `<div class="zellmarken">${ereignisMarken(e)}</div>` : STRICH },
+    { klasse: 'art', kopf: 'Art', sort: 'art', zelle: e => e.art ? esc(artText(e.art)) : STRICH },
+    { klasse: 'akteur', kopf: 'Umsetzender Akteur', sort: 'akteur', zelle: e => akteurMarken(e.akteur) },
+    { klasse: 'planung', kopf: 'Pla&shy;nung', sort: 'planung', mitte: true, zelle: e => planungHaken(e.planung) },
+    { klasse: 'zielgruppe', kopf: 'Zu er&shy;reichende Ziel&shy;gruppe', sort: 'zielgruppe', zelle: e => akteurMarken(e.zielgruppe) },
+    { klasse: 'kosten', kopf: 'Kosten', sort: 'kosten', mitte: true, zelle: e => geld(e.kosten) },
+    { klasse: 'dauer', kopf: 'Dauer', sort: 'dauer', mitte: true, zelle: e => punkte(e.dauer, DAUER) },
+    ...wirkungenMitWert.map(w => ({ klasse: 'wirkung', gruppe: true, kopf: w.kurz, sort: w.key, mitte: true,
+      zelle: e => punkte(e[w.key], STUFE) })),
+    { klasse: 'synergien', kopf: 'Syner&shy;gien', sort: 'synergien', mitte: true, zelle: e => punkte(e.synergien, STUFE) },
+    { klasse: 'steckbrief', kopf: 'Steck&shy;brief', mitte: true, zelle: e => {
+      const a = steckbriefAdresse(e.steckbrief);
+      return a
+        ? `<a class="steckbrief nur-bildschirm" href="${esc(a)}" target="_blank" rel="noopener" aria-label="Steckbrief ${esc(e.name)} (PDF, öffnet in neuem Fenster)">PDF</a>` +
+          '<span class="nur-druck" aria-hidden="true">ja</span>'
+        : STRICH;
+    } },
+  ];
+}
+
+/** Baut Spaltenbreiten und Kopf der Tabelle; die Gruppe „Wirksamkeit“
+ *  ueberspannt so viele Spalten, wie es Wirksamkeits-Spalten gibt. */
+function tabellenkopfBauen() {
+  const spalten = tabellenSpalten();
+  const tabelle = document.getElementById('tabelle');
+  tabelle.querySelectorAll('colgroup, thead').forEach(t => t.remove());
+  const gruppe = spalten.filter(s => s.gruppe).length;
+
+  const colgroup = document.createElement('colgroup');
+  colgroup.innerHTML = spalten.map(s => `<col class="sp-${s.klasse}">`).join('');
+
+  const kopfzelle = (s, zweizeilig) =>
+    `<th scope="col"${zweizeilig ? ' rowspan="2"' : ''}${s.sort ? ` data-sort="${s.sort}"` : ''}` +
+    `${s.mitte ? ' class="mitte"' : ''}${s.td === 'spalte-merken' ? ' class="spalte-merken"' : ''}>${s.kopf}</th>`;
+  let erste = '', gruppeGesetzt = false;
+  for (const s of spalten) {
+    if (s.gruppe) {
+      if (!gruppeGesetzt) erste += `<th scope="colgroup" colspan="${gruppe}" class="gruppe">Wirksamkeit</th>`;
+      gruppeGesetzt = true;
+    } else erste += kopfzelle(s, gruppe > 0);
+  }
+  const zweite = spalten.filter(s => s.gruppe).map(s => kopfzelle(s, false)).join('');
+  const thead = document.createElement('thead');
+  thead.innerHTML = `<tr>${erste}</tr>` + (gruppe ? `<tr>${zweite}</tr>` : '');
+
+  tabelle.querySelector('caption').after(colgroup, thead);
+  sortierknoepfeSetzen();
+}
+
 function zeileBauen(e) {
   const tr = document.createElement('tr');
-  const steckbrief = steckbriefAdresse(e.steckbrief);
-  const risiko = e.hazard ? `<div class="zellmarken">${risikoMarken(e.hazard)}</div>` : STRICH;
-  const fuer = e.akteure
-    ? `<div class="zellmarken">${zielgruppen(e.akteure).map(z => `<span class="marke">${esc(z)}</span>`).join('')}</div>`
-    : STRICH;
-  tr.innerHTML =
-    `<td class="spalte-merken">${merkKnopf(e)}</td>` +
-    `<td class="spalte-name">${nameHtml(e.name)}</td>` +
-    `<td>${risiko}</td>` +
-    `<td>${textOderStrich(e.art)}</td>` +
-    `<td>${fuer}</td>` +
-    `<td class="mitte">${geld(e.kosten)}</td>` +
-    `<td class="mitte">${punkte(e.dauer, DAUER)}</td>` +
-    WIRKUNGEN.map(w => `<td class="mitte">${punkte(e[w.key], STUFE)}</td>`).join('') +
-    `<td class="mitte">${steckbrief
-      ? `<a class="steckbrief nur-bildschirm" href="${esc(steckbrief)}" target="_blank" rel="noopener" aria-label="Steckbrief ${esc(e.name)} (PDF, öffnet in neuem Fenster)">PDF</a>` +
-        '<span class="nur-druck" aria-hidden="true">ja</span>'
-      : STRICH}</td>`;
+  tr.innerHTML = tabellenSpalten().map(s =>
+    `<td class="${[s.td, s.mitte ? 'mitte' : ''].filter(Boolean).join(' ')}">${s.zelle(e)}</td>`).join('');
   return tr;
 }
 
 // ------------------------------------------------------------------ Filtern
 
-const FILTERFELDER = ['zielgruppe', 'risiko', 'art', 'kosten'];
+const FILTERFELDER = ['ereignis', 'akteur', 'zielgruppe', 'art', 'kosten'];
 
 function kaesten(feld) {
   return [...document.querySelectorAll(`fieldset[data-feld="${feld}"] input`)];
@@ -247,13 +333,35 @@ function gewaehlt(feld) {
   return kaesten(feld).filter(k => k.checked).map(k => k.value);
 }
 
-function passtRisiko(e, wahl) {
+/** Haken fuer Extremwetterereignisse und Arten aus den Daten: bekannte in
+ *  fester Reihenfolge, neue hinten an. */
+function filterAufbauen() {
+  const bauen = (feld, bekannt, werteJeEintrag, text) => {
+    const vorhanden = new Set(alle.flatMap(werteJeEintrag));
+    const werte = [...bekannt.filter(w => vorhanden.has(w)),
+                   ...[...vorhanden].filter(w => !bekannt.includes(w)).sort((a, b) => a.localeCompare(b, 'de'))];
+    const feldset = document.querySelector(`fieldset[data-feld="${feld}"]`);
+    feldset.querySelectorAll('label').forEach(l => l.remove());
+    for (const w of werte) {
+      const label = document.createElement('label');
+      const kasten = document.createElement('input');
+      kasten.type = 'checkbox';
+      kasten.value = w;
+      label.append(kasten, ' ' + text(w));
+      feldset.append(label);
+    }
+  };
+  bauen('ereignis', EREIGNISSE, e => e.ereignisse, w => w);
+  bauen('art', ARTEN, e => (e.art ? [e.art] : []), artText);
+}
+
+function passtEreignis(e, wahl) {
   if (!wahl.length) return true;
-  const h = e.hazard;
-  return wahl.some(w => {
-    if (w === 'Hitze+Starkregen') return h.includes('Hitze') && h.includes('Starkregen');
-    return h.includes(w);
-  });
+  return e.ereignisse.some(t => wahl.includes(t)) || e.ereignisse.includes(ALLGEMEIN);
+}
+
+function passtAkteur(wert, wahl) {
+  return !wahl.length || wahl.some(b => wert.includes(b));
 }
 
 function suchbegriff() {
@@ -261,15 +369,16 @@ function suchbegriff() {
 }
 
 function gefiltert() {
-  const risiko = gewaehlt('risiko'), art = gewaehlt('art');
-  const kosten = gewaehlt('kosten'), ziel = gewaehlt('zielgruppe');
+  const ereignis = gewaehlt('ereignis'), art = gewaehlt('art'), kosten = gewaehlt('kosten');
+  const akteur = gewaehlt('akteur'), ziel = gewaehlt('zielgruppe');
   const suche = suchbegriff().toLowerCase();
   return alle.filter(e =>
     (!zustand.nurMerkliste || zustand.merkliste.has(e.id)) &&
-    passtRisiko(e, risiko) &&
+    passtEreignis(e, ereignis) &&
     (!art.length || art.includes(e.art)) &&
     (!kosten.length || kosten.includes(e.kosten)) &&
-    (!ziel.length || ziel.some(z => e.akteure.includes(z))) &&
+    passtAkteur(e.akteur, akteur) &&
+    passtAkteur(e.zielgruppe, ziel) &&
     (!suche || e.name.toLowerCase().includes(suche)));
 }
 
@@ -278,11 +387,13 @@ function gefiltert() {
  *  Hinweis verschwinden sie stumm, und niemand merkt, dass die Datengrundlage
  *  unvollstaendig ist. */
 function wegenLuecke() {
-  const risiko = gewaehlt('risiko'), art = gewaehlt('art'), kosten = gewaehlt('kosten');
+  const gesetzt = f => gewaehlt(f).length > 0;
   return alle.filter(e =>
-    (risiko.length && !e.hazard) ||
-    (art.length && !e.art) ||
-    (kosten.length && !e.kosten)).length;
+    (gesetzt('ereignis') && !e.ereignisse.length) ||
+    (gesetzt('art') && !e.art) ||
+    (gesetzt('kosten') && !e.kosten) ||
+    (gesetzt('akteur') && !e.akteur) ||
+    (gesetzt('zielgruppe') && !e.zielgruppe)).length;
 }
 
 function filterAnzahl() {
@@ -295,29 +406,27 @@ function sortieren(liste) {
   const { feld, auf } = zustand.sortierung;
   if (!feld) return liste;
   const richtung = auf ? 1 : -1;
-  const zahlfeld = !['name', 'hazard', 'art', 'akteure'].includes(feld);
+  const zahlfeld = !TEXTFELDER.includes(feld);
   return [...liste].sort((a, b) => {
     const x = a[feld], y = b[feld];
-    if (zahlfeld) {
-      // Leere Felder immer ans Ende, in beide Richtungen -- sonst fuellt
-      // sich die erste Bildschirmseite mit Strichen.
-      const lx = x === '', ly = y === '';
-      if (lx || ly) return lx && ly ? 0 : (lx ? 1 : -1);
-      return (parseInt(x, 10) - parseInt(y, 10)) * richtung;
-    }
+    // Leere Felder immer ans Ende, in beide Richtungen -- sonst fuellt
+    // sich die erste Bildschirmseite mit Strichen.
+    const lx = x === '', ly = y === '';
+    if (lx || ly) return lx && ly ? 0 : (lx ? 1 : -1);
+    if (zahlfeld) return (parseInt(x, 10) - parseInt(y, 10)) * richtung;
     return x.localeCompare(y, 'de') * richtung;
   });
 }
 
 // --------------------------------------------------------------- Chips
 
-const RISIKO_TEXT = { 'Hitze+Starkregen': 'Hitze und Starkregen' };
 const KOSTEN_TEXT = { 1: '€ bis 20.000 €', 2: '€€ 20–100.000 €', 3: '€€€ über 100.000 €' };
+const FELD_ZUSATZ = { akteur: 'Umsetzung', zielgruppe: 'Zielgruppe' };
 
 function chipText(feld, wert) {
-  if (feld === 'zielgruppe') return ZIELGRUPPE[wert];
-  if (feld === 'risiko') return RISIKO_TEXT[wert] || wert;
+  if (feld === 'akteur' || feld === 'zielgruppe') return `${FELD_ZUSATZ[feld]}: ${AKTEUR[wert]}`;
   if (feld === 'kosten') return KOSTEN_TEXT[wert];
+  if (feld === 'art') return artText(wert);
   return wert;
 }
 
@@ -363,7 +472,7 @@ function allesZuruecksetzen() {
 
 /** Die Auswahl steht in der Adresse, damit man sie als Link weitergeben
  *  kann: „Das sind eure acht Massnahmen.“ */
-const PARAM = { zielgruppe: 'fuer', risiko: 'risiko', art: 'art', kosten: 'kosten' };
+const PARAM = { ereignis: 'ereignis', akteur: 'fuer', zielgruppe: 'ziel', art: 'art', kosten: 'kosten' };
 
 function adresseSchreiben() {
   const p = new URLSearchParams();
@@ -386,22 +495,31 @@ function adresseSchreiben() {
   history.replaceState(null, '', location.pathname + (text ? '?' + text : ''));
 }
 
-function adresseLesen() {
+/** Filter aus der Adresse. Laeuft erst, wenn die Haken aus den Daten gebaut
+ *  sind. Aeltere Links mit ?risiko=… gelten fuer die Extremwetterereignisse;
+ *  „Hitze+Starkregen“ wird zu den beiden einzelnen Haken. */
+function filterAusAdresse() {
   const p = new URLSearchParams(location.search);
   document.getElementById('suchfeld').value = p.get('suche') || '';
   for (const feld of FILTERFELDER) {
-    const werte = (p.get(PARAM[feld]) || '').split(',').filter(Boolean);
+    let werte = (p.get(PARAM[feld]) || '').split(',').filter(Boolean);
+    if (feld === 'ereignis' && !werte.length) {
+      werte = (p.get('risiko') || '').split(',').filter(Boolean).flatMap(w => w.split('+'));
+    }
     kaesten(feld).forEach(k => { k.checked = werte.includes(k.value); });
   }
+}
+
+function adresseLesen() {
+  const p = new URLSearchParams(location.search);
   const s = p.get('sortierung');
   if (s) {
     const feld = s.replace(/-ab$/, '');
     if (SPALTEN.includes(feld)) zustand.sortierung = { feld, auf: !s.endsWith('-ab') };
   }
-  // Ansicht aus der Adresse, sonst Standard. Alte Links mit
-  // ?ansicht=tabelle funktionieren weiter.
+  // Ansicht aus der Adresse, sonst Standard. ?ansicht=karten aus aelteren
+  // Links gilt weiter als Kacheln.
   const ansicht = p.get('ansicht');
-  // ?ansicht=karten aus aelteren Links gilt weiter als Kacheln.
   zustand.ansicht = ansicht === 'kacheln' || ansicht === 'karten' ? 'karten'
     : ansicht === 'tabelle' ? 'tabelle' : STANDARD_ANSICHT;
   // Frueher dauerhaft gemerkte Wahl aufraeumen.
@@ -476,26 +594,32 @@ function stufeText(wert, woerter) {
 }
 
 // Zeilen des Vergleichs. „besser“ sagt, welcher Wert hervorgehoben wird.
-const VERGLEICH_ZEILEN = [
-  { name: 'Risiko', html: e => e.hazard ? risikoMarken(e.hazard) : STRICH },
-  { name: 'Art', html: e => textOderStrich(e.art) },
-  { name: 'Für wen', html: e => e.akteure ? esc(zielgruppen(e.akteure).join(', ')) : STRICH },
-  { name: 'Kosten', key: 'kosten', besser: 'niedrig',
-    html: e => e.kosten && KOSTEN[e.kosten]
-      ? `${geld(e.kosten, true)} <span class="leise">${KOSTEN[e.kosten]}</span>`
-      : '<span class="leise">nicht angegeben</span>' },
-  { name: 'Dauer', key: 'dauer', besser: 'niedrig',
-    html: e => e.dauer && DAUER[e.dauer] ? stufeText(e.dauer, DAUER) : '<span class="leise">nicht angegeben</span>' },
-  { gruppe: 'Wirkung' },
-  ...WIRKUNGEN.map(w => ({ name: w.name, erklaerung: w.erklaerung, key: w.key, besser: 'hoch',
-    html: e => stufeText(e[w.key], STUFE) })),
-  { name: 'Steckbrief', html: e => {
-    const a = steckbriefAdresse(e.steckbrief);
-    return a ? `<a class="steckbrief nur-bildschirm" href="${esc(a)}" target="_blank" rel="noopener">PDF öffnen` +
-      `<span class="unsichtbar">: Steckbrief ${esc(e.name)}</span>${NEUES_FENSTER}</a>` +
-      '<span class="nur-druck" aria-hidden="true">ja, siehe Anhang</span>' : STRICH;
-  } },
-];
+function vergleichZeilen() {
+  return [
+    { name: 'Extremwetterereignis', html: e => ereignisMarken(e) },
+    { name: 'Art', html: e => e.art ? esc(artText(e.art)) : STRICH },
+    { name: 'Umsetzender Akteur', html: e => e.akteur ? esc(akteure(e.akteur).join(', ')) : STRICH },
+    { name: 'Planung', html: e => (e.planung === '1' ? '✓ ja' : 'nein') },
+    { name: 'Zu erreichende Zielgruppe', html: e => e.zielgruppe ? esc(akteure(e.zielgruppe).join(', ')) : STRICH },
+    { name: 'Kosten', key: 'kosten', besser: 'niedrig',
+      html: e => e.kosten && KOSTEN[e.kosten]
+        ? `${geld(e.kosten, true)} <span class="leise">${KOSTEN[e.kosten]}</span>`
+        : '<span class="leise">nicht angegeben</span>' },
+    { name: 'Dauer', key: 'dauer', besser: 'niedrig',
+      html: e => e.dauer && DAUER[e.dauer] ? stufeText(e.dauer, DAUER) : '<span class="leise">nicht angegeben</span>' },
+    { gruppe: 'Wirksamkeit' },
+    ...wirkungenMitWert.map(w => ({ name: w.name, erklaerung: w.erklaerung, key: w.key, besser: 'hoch',
+      html: e => stufeText(e[w.key], STUFE) })),
+    { name: 'Synergien', erklaerung: 'zusätzlicher Nutzen', key: 'synergien', besser: 'hoch',
+      html: e => stufeText(e.synergien, STUFE) },
+    { name: 'Steckbrief', html: e => {
+      const a = steckbriefAdresse(e.steckbrief);
+      return a ? `<a class="steckbrief nur-bildschirm" href="${esc(a)}" target="_blank" rel="noopener">PDF öffnen` +
+        `<span class="unsichtbar">: Steckbrief ${esc(e.name)}</span>${NEUES_FENSTER}</a>` +
+        '<span class="nur-druck" aria-hidden="true">ja, siehe Anhang</span>' : STRICH;
+    } },
+  ];
+}
 
 /** Welche Spalten in dieser Zeile den besten Wert haben. Hervorgehoben wird
  *  nur, wenn sich die Werte unterscheiden -- sind alle gleich, ist keiner
@@ -522,7 +646,7 @@ function vergleichZeichnen() {
     `<th scope="col"><div class="vgl-kopf"><span>${nameHtml(e.name)}</span>` +
     `<button type="button" class="vgl-weg" data-merken="${esc(e.id)}"` +
     ` aria-label="${esc(e.name)} aus dem Vergleich nehmen" title="Aus dem Vergleich nehmen">✕</button></div></th>`).join('');
-  const zeilen = VERGLEICH_ZEILEN.map(z => {
+  const zeilen = vergleichZeilen().map(z => {
     if (z.gruppe) return `<tr class="vgl-gruppe"><th scope="rowgroup" colspan="${liste.length + 1}">${z.gruppe}</th></tr>`;
     const beste = besteSpalten(z, liste);
     return `<tr><th scope="row">${z.name}` +
@@ -751,11 +875,7 @@ window.addEventListener('beforeprint', druckkopfFuellen);
 
 function alsCsv() {
   const treffer = zustand.vergleich ? vergleichsListe().slice(0, MAX_VERGLEICH) : sortieren(gefiltert());
-  const kopf = ['Maßnahme', 'Hazard', 'Art', 'Akteure', 'Kosten', 'Umsetzungsdauer',
-                'Wirksamkeit - Rückhalt', 'Wirksamkeit - Ableitung',
-                'Wirksamkeit - Versickerung', 'Wirksamkeit - Kühlung',
-                'Aufwertung Stadtstruktur', 'Steckbrief'];
-  const zeilen = [kopf].concat(treffer.map(e => SPALTEN.map(s =>
+  const zeilen = [CSV_KOPF].concat(treffer.map(e => SPALTEN.map(s =>
     s === 'steckbrief' && steckbriefAdresse(e[s]) ? new URL(steckbriefAdresse(e[s]), location.href).href : e[s])));
   const klecks = new Blob([csvText(zeilen)], { type: 'text/csv;charset=utf-8' });
   const adresse = URL.createObjectURL(klecks);
@@ -782,13 +902,33 @@ function kopfleisteMessen() {
   wurzel.setProperty('--seitenkopf', document.querySelector('.kopf').getBoundingClientRect().height + 'px');
 }
 
+/** Sortierbare Spaltenkoepfe bekommen einen echten Knopf. Eine anklickbare
+ *  Zelle erkennen Screenreader nicht als bedienbar; die Richtung sagt
+ *  aria-sort an der Zelle. */
+function sortierknoepfeSetzen() {
+  document.querySelectorAll('#tabelle thead th[data-sort]').forEach(th => {
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'sortierknopf';
+    knopf.append(...th.childNodes);
+    th.append(knopf);
+    knopf.addEventListener('click', () => {
+      const feld = th.dataset.sort;
+      zustand.sortierung = { feld, auf: zustand.sortierung.feld === feld ? !zustand.sortierung.auf : true };
+      zeichnen();
+    });
+  });
+}
+
 function verdrahten() {
   const beobachter = new ResizeObserver(kopfleisteMessen);
   beobachter.observe(document.querySelector('.ergebnis-kopf'));
   beobachter.observe(document.querySelector('.kopf'));
   window.addEventListener('resize', kopfleisteMessen);
-  document.querySelectorAll('.filter input[type="checkbox"]')
-    .forEach(k => k.addEventListener('change', zeichnen));
+  // Ein Lauscher fuer alle Haken, auch die erst aus den Daten gebauten.
+  document.getElementById('filter').addEventListener('change', e => {
+    if (e.target.matches('input[type="checkbox"]')) zeichnen();
+  });
   document.getElementById('suchfeld').addEventListener('input', zeichnen);
   document.getElementById('zuruecksetzen').addEventListener('click', allesZuruecksetzen);
 
@@ -825,21 +965,6 @@ function verdrahten() {
       zustand.ansicht = b.dataset.ansicht;
       zeichnen();
     }));
-  // Sortierbare Spaltenkoepfe bekommen einen echten Knopf. Eine anklickbare
-  // Zelle erkennen Screenreader nicht als bedienbar; die Richtung sagt
-  // aria-sort an der Zelle.
-  document.querySelectorAll('thead th[data-sort]').forEach(th => {
-    const knopf = document.createElement('button');
-    knopf.type = 'button';
-    knopf.className = 'sortierknopf';
-    knopf.append(...th.childNodes);
-    th.append(knopf);
-    knopf.addEventListener('click', () => {
-      const feld = th.dataset.sort;
-      zustand.sortierung = { feld, auf: zustand.sortierung.feld === feld ? !zustand.sortierung.auf : true };
-      zeichnen();
-    });
-  });
 
   document.getElementById('merk-nur').addEventListener('click', () => {
     if (zustand.nurMerkliste) merklisteVerlassen();
@@ -888,6 +1013,13 @@ if (window.parent !== window) {
   window.addEventListener('load', hoeheMelden);
 }
 
+async function steckbriefeLaden() {
+  try {
+    const antwort = await fetch(STECKBRIEF_LISTE, { cache: 'no-cache' });
+    if (antwort.ok) vorhandeneSteckbriefe = new Set(await antwort.json());
+  } catch { /* unbekannt: alle eingetragenen gelten als vorhanden */ }
+}
+
 async function starten() {
   merklisteLaden();
   adresseLesen();
@@ -897,13 +1029,17 @@ async function starten() {
     // no-cache: beim Server nachfragen, ob es einen neueren Stand gibt.
     // Sonst saehe man nach dem Veroeffentlichen bis zu zehn Minuten lang
     // die alte Tabelle; ist sie unveraendert, antwortet der Server knapp.
-    const antwort = await fetch(DATEI, { cache: 'no-cache' });
+    const [antwort] = await Promise.all([fetch(DATEI, { cache: 'no-cache' }), steckbriefeLaden()]);
     if (!antwort.ok) throw new Error(`${antwort.status} ${antwort.statusText}`);
     alle = einlesen(await antwort.text());
+    wirkungenMitWert = WIRKUNGEN.filter(w => alle.some(e => e[w.key] !== ''));
     // Was auf der Merkliste steht, aber nicht mehr in der Tabelle, faellt
     // stillschweigend heraus -- sonst zaehlte der Knopf Unsichtbares mit.
     const da = new Set(alle.map(e => e.id));
     zustand.merkliste = new Set([...zustand.merkliste].filter(id => da.has(id)));
+    filterAufbauen();
+    filterAusAdresse();
+    tabellenkopfBauen();
     zeichnen();
   } catch (fehler) {
     document.getElementById('zaehler').textContent =

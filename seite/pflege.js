@@ -16,22 +16,33 @@ const REPO_URL = `https://github.com/${BESITZER}/${REPO}`;
 // Die Spalten in der Reihenfolge der CSV. Die Schluessel sind dieselben wie in
 // app.js. 'auch' sind weitere Ueberschriften, unter denen eine Spalte erkannt
 // wird -- etwa aus der Beschriftung auf der Seite.
-const RISIKEN = ['Hitze', 'Starkregen', 'Hitze & Starkregen', 'Dürre & Starkregen'];
-const ARTEN = ['baulich', 'planerisch', 'administrativ', 'Information', 'Anreizsystem'];
+// Bekannte Werte; neue sind moeglich und erscheinen auf der Seite als eigener
+// Filterhaken (die Filter werden aus den Daten gebaut).
+const EREIGNISSE = ['Hitze', 'Starkregen', 'Dürre', 'Hochwasser', 'Klimaanpassung allgemein'];
+const ARTEN = ['baulich - grau', 'baulich - blau-grün', 'planerisch', 'administrativ',
+               'Information', 'Anreizsystem', 'Risikotransfer'];
+// In der Excel heisst die Spalte mit dem Dateinamen „Pdf“; „Steckbrief“ steht
+// dort fuer Ja/Nein. In der CSV traegt „Steckbrief“ den Dateinamen. „vorrang“
+// sagt, welche Ueberschrift gewinnt, wenn mehrere passen.
 const FELDER = [
-  { key: 'name', kopf: 'Maßnahme', typ: 'text', breite: 48, auch: ['Massnahme', 'Name'] },
-  { key: 'hazard', kopf: 'Hazard', typ: 'text', breite: 20, auch: ['Risiko', 'Lokales Risiko'], liste: RISIKEN },
-  { key: 'art', kopf: 'Art', typ: 'text', breite: 15, auch: ['Art der Maßnahme'], liste: ARTEN },
-  { key: 'akteure', kopf: 'Akteure', typ: 'akteure', breite: 10, auch: ['Zielgruppe'] },
-  { key: 'kosten', kopf: 'Kosten', typ: 'stufe', min: 1, breite: 9, auch: ['Investitionshöhe'] },
-  { key: 'dauer', kopf: 'Umsetzungsdauer', typ: 'stufe', min: 0, breite: 11, auch: ['Dauer'] },
-  { key: 'rueckhalt', kopf: 'Wirksamkeit - Rückhalt', typ: 'stufe', min: 0, breite: 11, auch: ['Rückhalt'] },
-  { key: 'ableitung', kopf: 'Wirksamkeit - Ableitung', typ: 'stufe', min: 0, breite: 11, auch: ['Ableitung'] },
-  { key: 'versickerung', kopf: 'Wirksamkeit - Versickerung', typ: 'stufe', min: 0, breite: 11, auch: ['Versickerung'] },
-  { key: 'kuehlung', kopf: 'Wirksamkeit - Kühlung', typ: 'stufe', min: 0, breite: 11, auch: ['Kühlung'] },
-  { key: 'aufwertung', kopf: 'Aufwertung Stadtstruktur', typ: 'stufe', min: 0, breite: 12, auch: ['Stadtstruktur', 'Aufwertung'] },
-  { key: 'steckbrief', kopf: 'Steckbrief', typ: 'steckbrief', breite: 40, auch: ['Steckbrief (PDF)', 'PDF', 'Link'] },
+  { key: 'name', kopf: 'Maßnahme', typ: 'text', breite: 44, auch: ['Massnahme', 'Maßnahmen', 'Name'] },
+  { key: 'ereignis', kopf: 'Extremwetterereignis', typ: 'ereignis', breite: 22, auch: ['Hazard', 'Risiko', 'Lokales Risiko'] },
+  { key: 'art', kopf: 'Art', typ: 'text', breite: 18, auch: ['Art der Maßnahme'] },
+  { key: 'akteur', kopf: 'Umsetzender Akteur', typ: 'akteure', breite: 11, auch: ['Akteure', 'Akteur'] },
+  { key: 'planung', kopf: 'Planung', typ: 'janein', breite: 9, auch: [] },
+  { key: 'zielgruppe', kopf: 'Zu erreichende Zielgruppe', typ: 'akteure', breite: 11, auch: ['Zielgruppe'] },
+  { key: 'kosten', kopf: 'Kosten', typ: 'stufe', min: 1, breite: 8, auch: ['Investitionshöhe'] },
+  { key: 'dauer', kopf: 'Umsetzungsdauer', typ: 'stufe', min: 0, breite: 10, auch: ['Dauer'] },
+  { key: 'rueckhalt', kopf: 'Wirksamkeit - Rückhalt', typ: 'stufe', min: 0, breite: 10, auch: ['Rückhalt'] },
+  { key: 'ableitung', kopf: 'Wirksamkeit - Ableitung', typ: 'stufe', min: 0, breite: 10, auch: ['Ableitung'] },
+  { key: 'versickerung', kopf: 'Wirksamkeit - Versickerung', typ: 'stufe', min: 0, breite: 10, auch: ['Versickerung'] },
+  { key: 'kuehlung', kopf: 'Wirksamkeit - Kühlung', typ: 'stufe', min: 0, breite: 10, auch: ['Kühlung'] },
+  { key: 'synergien', kopf: 'Synergien', typ: 'stufe', min: 0, breite: 10, auch: ['Aufwertung Stadtstruktur', 'Stadtstruktur'] },
+  { key: 'steckbrief', kopf: 'Steckbrief', typ: 'steckbrief', breite: 40,
+    auch: ['Pdf', 'Steckbrief (PDF)', 'Link'], vorrang: ['Pdf', 'Steckbrief (PDF)', 'Steckbrief', 'Link'] },
 ];
+// Spalten der Excel, die bewusst nicht uebernommen werden -- ohne Hinweis.
+const STILL_IGNORIERT = ['Steckbrief'];
 
 // ------------------------------------------------------------------ Zustand
 
@@ -327,14 +338,19 @@ async function tabelleLesen(datei) {
 /** Ordnet die Ueberschriften den bekannten Spalten zu. Reihenfolge und
  *  Schreibweise duerfen abweichen. */
 function spaltenZuordnen(kopfzeile) {
-  const zuordnung = {}, unbekannt = [];
+  const zuordnung = {}, rang = {}, benutzt = new Set();
   kopfzeile.forEach((titel, i) => {
     if (!titel || !titel.trim()) return;
     const n = normiert(titel);
-    const feld = FELDER.find(f => [f.kopf, ...f.auch].some(t => normiert(t) === n));
-    if (feld && zuordnung[feld.key] === undefined) zuordnung[feld.key] = i;
-    else unbekannt.push(titel.trim());
+    for (const f of FELDER) {
+      const namen = f.vorrang || [f.kopf, ...f.auch];
+      const r = namen.findIndex(t => normiert(t) === n);
+      if (r >= 0 && (rang[f.key] === undefined || r < rang[f.key])) { zuordnung[f.key] = i; rang[f.key] = r; }
+    }
   });
+  Object.values(zuordnung).forEach(i => benutzt.add(i));
+  const unbekannt = kopfzeile.map((t, i) => (t && t.trim() && !benutzt.has(i) &&
+    !STILL_IGNORIERT.some(x => normiert(x) === normiert(t)) ? t.trim() : null)).filter(Boolean);
   return { zuordnung, unbekannt };
 }
 
@@ -377,6 +393,19 @@ function wertPruefen(feld, roh, link) {
     return { wert: String(n) };
   }
 
+  if (feld.typ === 'ereignis') {
+    // „Hitze & Starkregen“: einheitlich mit „ & “ verbunden
+    return { wert: wert.split(/\s*&\s*/).map(t => t.trim()).filter(Boolean).join(' & ') };
+  }
+
+  if (feld.typ === 'janein') {
+    if (wert === '') return { wert };
+    const w = wert.toLowerCase();
+    if (['1', 'ja', 'x', '✓', 'wahr', 'true'].includes(w)) return { wert: '1' };
+    if (['0', 'nein', 'falsch', 'false', '-'].includes(w)) return { wert: '0' };
+    return { wert, fehler: `„${wert}“ — erwartet 1 (ja) oder 0 (nein)` };
+  }
+
   if (feld.typ === 'akteure') {
     const buchstaben = wert.toUpperCase().replace(/[\s,;/+&-]/g, '');
     const falsch = [...buchstaben].filter(b => !AKTEURE[b]);
@@ -398,7 +427,10 @@ function wertPruefen(feld, roh, link) {
     wert = wert.replace(/^\.?\/?steckbriefe\//i, '');
     if (/[/\\:]/.test(wert) || wert.startsWith('.'))
       return { wert, fehler: `„${wert}“ — erwartet wird ein Dateiname wie „Gruendach.pdf“ oder ein https-Link` };
-    if (!/\.pdf$/i.test(wert)) return { wert, fehler: `„${wert}“ endet nicht auf .pdf` };
+    if (!/\.pdf$/i.test(wert)) {
+      if (/\.[a-z0-9]{2,4}$/i.test(wert)) return { wert, fehler: `„${wert}“ endet nicht auf .pdf` };
+      return { wert: wert + '.pdf', warnung: `„${wert}“ ohne Endung — als „${wert}.pdf“ übernommen` };
+    }
     return { wert };
   }
 
@@ -449,14 +481,15 @@ function pruefen() {
     }
     gesehen.set(e.name, zeile.nr);
 
-    if (e.hazard && !RISIKEN.includes(e.hazard)) {
-      const findbar = /hitze|starkregen/i.test(e.hazard);
-      melde('warnung', `Risiko „${e.hazard}“ ist neu.` + (findbar ? '' :
-        ' Über den Risiko-Filter ist die Maßnahme nicht zu finden — die Seite filtert nur nach Hitze und Starkregen.'), zeile.nr);
+    for (const t of e.ereignis ? e.ereignis.split(' & ') : []) {
+      if (!EREIGNISSE.includes(t)) {
+        melde('warnung', `Extremwetterereignis „${t}“ ist neu und erscheint auf der Seite als eigener Filterhaken. ` +
+          `Bekannt sind: ${EREIGNISSE.join(', ')}. Tippfehler?`, zeile.nr);
+      }
     }
     if (e.art && !ARTEN.includes(e.art)) {
-      melde('warnung', `Art „${e.art}“ kennt die Seite nicht. Über den Art-Filter ist die Maßnahme ` +
-        `nicht zu finden. Bekannt sind: ${ARTEN.join(', ')}.`, zeile.nr);
+      melde('warnung', `Art „${e.art}“ ist neu und erscheint auf der Seite als eigener Filterhaken. ` +
+        `Bekannt sind: ${ARTEN.join(', ')}. Tippfehler?`, zeile.nr);
     }
     eintraege.push(e);
   }
@@ -466,8 +499,10 @@ function pruefen() {
     if (n) melde('hinweis', `${n} Maßnahme${n === 1 ? '' : 'n'} ohne ${was} — sie fallen heraus, ` +
       `sobald jemand danach filtert (die Seite weist darauf hin).`);
   };
-  ohne('hazard', 'Risiko');
+  ohne('ereignis', 'Extremwetterereignis');
   ohne('art', 'Art');
+  ohne('akteur', 'umsetzenden Akteur');
+  ohne('zielgruppe', 'Zielgruppe');
   if (umgewandelt) {
     melde('hinweis', `${umgewandelt} Steckbrief${umgewandelt === 1 ? '' : 'e'} als volle Adresse eingetragen ` +
       `(vermutlich aus „Als CSV“ der öffentlichen Seite) — wieder in den Dateinamen umgewandelt.`);
@@ -751,14 +786,22 @@ function vorlageHerunterladen(eintraege = zustand.stand && zustand.stand.eintrae
                               standText = `Heruntergeladen am ${heute()} von ${REPO_URL}`,
                               dateiname = `${heute()} Massnahmen KARE.xlsx`) {
   if (!eintraege) return;
-  const kopf = FELDER.map(f => f.kopf);
-  const zeilen = eintraege.map(e => FELDER.map(f =>
-    f.typ === 'stufe' && e[f.key] !== '' ? Number(e[f.key]) : e[f.key]));
-  const spalte = key => FELDER.findIndex(f => f.key === key);
+  // Spalten wie in der Excel des Projekts: vor „Pdf“ (Dateiname) steht
+  // „Steckbrief“ mit Ja/Nein. Beim Hochladen wird Ja/Nein nicht gebraucht.
+  const VORLAGE = [...FELDER.filter(f => f.key !== 'steckbrief'),
+    { key: '_steckbrief_ja', kopf: 'Steckbrief', breite: 10 },
+    { ...FELDER.find(f => f.key === 'steckbrief'), kopf: 'Pdf' }];
+  const kopf = VORLAGE.map(f => f.kopf);
+  const zeilen = eintraege.map(e => VORLAGE.map(f =>
+    f.key === '_steckbrief_ja' ? (e.steckbrief ? 'Ja' : 'Nein')
+      : (f.typ === 'stufe' || f.typ === 'janein') && e[f.key] !== '' ? Number(e[f.key]) : e[f.key]));
+  const spalte = key => VORLAGE.findIndex(f => f.key === key);
+  const kombis = ['K', 'U', 'P', 'KU', 'KP', 'UP', 'KUP'];
   const auswahl = [
-    { spalte: spalte('hazard'), werte: RISIKEN, hinweis: 'Neue Werte sind möglich, aber der Risiko-Filter kennt nur Hitze und Starkregen.' },
-    { spalte: spalte('art'), werte: ARTEN, hinweis: 'Diese Art kennt der Filter auf der Seite nicht.' },
-    { spalte: spalte('akteure'), werte: ['K', 'U', 'P', 'KU', 'KP', 'UP', 'KUP'], hinweis: 'K = Kommunen, U = Unternehmen, P = Haushalte, auch kombiniert.' },
+    { spalte: spalte('art'), werte: ARTEN, hinweis: 'Neue Arten sind möglich und erscheinen als eigener Filterhaken.' },
+    { spalte: spalte('akteur'), werte: kombis, hinweis: 'K = Kommunen, U = Unternehmen, P = Privathaushalte, auch kombiniert.' },
+    { spalte: spalte('zielgruppe'), werte: kombis, hinweis: 'K = Kommunen, U = Unternehmen, P = Privathaushalte, auch kombiniert.' },
+    { spalte: spalte('planung'), werte: ['0', '1'], streng: true, hinweis: '1 = ja (Haken), 0 = nein.' },
     ...FELDER.filter(f => f.typ === 'stufe').map(f => ({
       spalte: spalte(f.key), streng: true,
       werte: f.min === 1 ? ['1', '2', '3'] : ['0', '1', '2', '3'],
@@ -768,20 +811,24 @@ function vorlageHerunterladen(eintraege = zustand.stand && zustand.stand.eintrae
   const hinweise = [
     ['Spalte', 'Bedeutung'],
     ['Maßnahme', 'Name der Maßnahme. Muss eindeutig sein — daran erkennt die Pflegeseite, welche Maßnahme geändert wurde.'],
-    ['Hazard', 'Hitze, Starkregen oder eine Verbindung wie „Hitze & Starkregen“. Der Filter sucht nach den Wörtern Hitze und Starkregen.'],
-    ['Art', ARTEN.join(', ') + '. Andere Werte findet der Filter nicht.'],
-    ['Akteure', 'Für wen die Maßnahme gedacht ist: K = Kommunen, U = Unternehmen, P = Haushalte (private). Kombinieren durch Aneinanderreihen, z. B. UP.'],
+    ['Extremwetterereignis', EREIGNISSE.join(', ') + '; mehrere mit „&“ verbunden, z. B. „Hitze & Starkregen“. „Klimaanpassung allgemein“ erscheint auf der Seite bei jedem Ereignisfilter mit. Neue Werte werden zu eigenen Filterhaken.'],
+    ['Art', ARTEN.join(', ') + '. Neue Werte werden zu eigenen Filterhaken.'],
+    ['Umsetzender Akteur', 'Wer die Maßnahme umsetzt: K = Kommunen, U = Unternehmen, P = Privathaushalte. Kombinieren durch Aneinanderreihen, z. B. KUP.'],
+    ['Planung', '1 = ja (auf der Seite ein Haken), 0 = nein.'],
+    ['Zu erreichende Zielgruppe', 'Wen die Maßnahme erreichen soll, Buchstaben wie bei Umsetzender Akteur. Leer = nicht angegeben.'],
     ['Kosten', '1 = bis 20.000 €, 2 = 20.000 bis 100.000 €, 3 = über 100.000 €. Leer = nicht bekannt.'],
-    ['Umsetzungsdauer', '1 = kurz, 2 = mittel, 3 = lang. Zählt auch Genehmigung und Flächenverfügbarkeit, nicht nur die Bauzeit.'],
-    ['Wirksamkeit …, Aufwertung Stadtstruktur', '0 = keine, 1 = gering, 2 = mittel, 3 = hoch. Leer heißt „nicht bewertet“, nicht „keine Wirkung“.'],
-    ['Steckbrief', `Dateiname des PDF im Ordner ${ORDNER_PDF}/ (z. B. Gruendach.pdf, Groß-/Kleinschreibung beachten) oder ein vollständiger https-Link. Ein Excel-Hyperlink geht auch.`],
+    ['Umsetzungsdauer', '1 = kurz, 2 = mittel, 3 = lang. Abhängig von Bauzeit, Genehmigungsverfahren und Flächenverfügbarkeit.'],
+    ['Wirksamkeit …', '0 = keine, 1 = gering, 2 = mittel, 3 = hoch. Leer heißt „nicht bewertet“, nicht „keine Wirkung“.'],
+    ['Synergien', 'Zusätzlicher Nutzen über die Wirksamkeit hinaus. 0 bis 3 wie oben.'],
+    ['Steckbrief', 'Ja/Nein — nur zur Übersicht, die Seite richtet sich nach „Pdf“.'],
+    ['Pdf', `Dateiname des Steckbriefs im Ordner ${ORDNER_PDF}/ (z. B. Steckbrief_Zisternen.pdf, Groß-/Kleinschreibung beachten) oder ein vollständiger https-Link.`],
     ['', ''],
     ['Ablauf', 'Datei bearbeiten, speichern und auf der Pflegeseite (pflege.html) wieder hochladen. Dort wird geprüft und verglichen, bevor etwas veröffentlicht wird.'],
     ['Stand', standText],
   ];
   const klecks = Xlsx.schreiben([
     { name: 'Maßnahmen', zeilen: [kopf, ...zeilen], kopfzeile: true,
-      breiten: FELDER.map(f => f.breite), auswahl },
+      breiten: VORLAGE.map(f => f.breite), auswahl },
     { name: 'Hinweise', zeilen: hinweise, kopfzeile: true, umbruch: true, breiten: [34, 100] },
   ]);
   speichern(dateiname, klecks);

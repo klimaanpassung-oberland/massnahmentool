@@ -1,6 +1,6 @@
 # Anpassungscoaching-Tool
 
-Maßnahmen zur Anpassung an Hitze und Starkregen für Kommunen, Unternehmen und
+Maßnahmen zur Anpassung an Hitze, Starkregen, Dürre und Hochwasser für Kommunen, Unternehmen und
 Haushalte in der Region Oberland, aus dem Projekt **KARE – Klimaanpassung in
 der Region Oberland**.
 
