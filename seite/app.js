@@ -269,7 +269,7 @@ function tabellenSpalten() {
     { klasse: 'art', kopf: 'Art', sort: 'art', zelle: e => e.art ? esc(artText(e.art)) : STRICH },
     { klasse: 'akteur', kopf: 'Umsetzender Akteur', sort: 'akteur', zelle: e => akteurMarken(e.akteur) },
     { klasse: 'planung', kopf: 'Pla&shy;nung', sort: 'planung', mitte: true, zelle: e => planungHaken(e.planung) },
-    { klasse: 'zielgruppe', kopf: 'Zu er&shy;reichende Ziel&shy;gruppe', sort: 'zielgruppe', zelle: e => akteurMarken(e.zielgruppe) },
+    { klasse: 'zielgruppe', kopf: 'Zu erreichende Ziel&shy;gruppe', sort: 'zielgruppe', zelle: e => akteurMarken(e.zielgruppe) },
     { klasse: 'kosten', kopf: 'Kosten', sort: 'kosten', mitte: true, zelle: e => geld(e.kosten) },
     { klasse: 'dauer', kopf: 'Dauer', sort: 'dauer', mitte: true, zelle: e => punkte(e.dauer, DAUER) },
     ...wirkungenMitWert.map(w => ({ klasse: 'wirkung', gruppe: true, kopf: w.kurz, sort: w.key, mitte: true,
