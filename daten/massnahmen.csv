@@ -1,8 +1,8 @@
 ﻿Maßnahme;Extremwetterereignis;Art;Umsetzender Akteur;Planung;Zu erreichende Zielgruppe;Kosten;Umsetzungsdauer;Wirksamkeit - Rückhalt;Wirksamkeit - Ableitung;Wirksamkeit - Versickerung;Wirksamkeit - Kühlung;Synergien;Steckbrief
-Mulden-Rigolen-Systeme;Starkregen & Dürre;baulich - grau;KUP;1;UP;2;2;2;0;3;;2;Steckbrief_MuldenRigolen.pdf
-Zisternen;Dürre & Starkregen;baulich - grau;KUP;1;UP;1;2;2;0;0;;0;Steckbrief_Zisternen.pdf
-Barrieren gegen Oberflächenwasser;Starkregen;baulich - grau;KUP;0;;1;2;1;2;1;;0;Steckbrief_BarrierenOberflächenwasser.pdf
-Notwasserwege;Starkregen & Hochwasser;baulich - grau;K;1;;2;2;0;3;0;;1;Steckbrief_Notwasserwege.pdf
+Mulden-Rigolen-Systeme;Starkregen & Dürre;baulich - grau;KUP;1;UP;2;2;2;;3;;2;Steckbrief_MuldenRigolen.pdf
+Zisternen;Dürre & Starkregen;baulich - grau;KUP;1;UP;1;2;2;;;;;Steckbrief_Zisternen.pdf
+Barrieren gegen Oberflächenwasser;Starkregen;baulich - grau;KUP;0;;1;2;1;2;1;;;Steckbrief_BarrierenOberflächenwasser.pdf
+Notwasserwege;Starkregen & Hochwasser;baulich - grau;K;1;;2;2;;3;;;1;Steckbrief_Notwasserwege.pdf
 Abdichtung von Gebäuden;Starkregen;baulich - grau;KUP;0;;1;2;;;;;;Steckbrief_AbdichtungGebäude.pdf
 Konstruktive Verschattung am Gebäude;Hitze;baulich - grau;KUP;0;;2;2;;;;;;Steckbrief_VerschattungGebäude.pdf
 Außenliegender Sonnenschutz;Hitze;baulich - grau;KUP;0;;1;1;;;;;;Steckbrief_AußenliegenderSonnenschutz.pdf
@@ -11,12 +11,12 @@ Rückstauschutz;Starkregen;baulich - grau;KUP;0;;1;2;;;;;;Steckbrief_Rückstausc
 Mobile Schutzeinrichtungen;Starkregen & Hochwasser;baulich - grau;KUP;0;;1;1;;;;;;Steckbrief_MobileHochwasserschutzeinrichtung.pdf
 Trinkwasserbrunnen;Hitze;baulich - grau;K;0;;2;2;;;;;;Steckbrief_Trinkwasserbrunnen.pdf
 Sprühnebel-Anlage;Hitze;baulich - grau;KU;0;;2;2;;;;;;Steckbrief_AnlagenSprühnebel.pdf
-Regenrückhaltebecken;Hitze & Starkregen;baulich - blau-grün;K;1;;3;3;3;0;0;;0;Steckbrief_Regenrückhaltebecken.pdf
-Multifunktionale Retentionsflächen;Hitze & Starkregen;baulich - blau-grün;K;1;;2;2;2;0;1;;3;Steckbrief_MultifunktionaleRetentionsflächen.pdf
-Entsiegelung;Hitze & Starkregen;baulich - blau-grün;KUP;0;;2;2;1;0;2;;3;Steckbrief_Entsiegelung.pdf
-Versickerungsmulden;Starkregen;baulich - blau-grün;KUP;1;;1;2;2;0;1;;2;Steckbrief_Versickerungsmulden.pdf
+Regenrückhaltebecken;Hitze & Starkregen;baulich - blau-grün;K;1;;3;3;3;;;;;Steckbrief_Regenrückhaltebecken.pdf
+Multifunktionale Retentionsflächen;Hitze & Starkregen;baulich - blau-grün;K;1;;2;2;2;;1;;3;Steckbrief_MultifunktionaleRetentionsflächen.pdf
+Entsiegelung;Hitze & Starkregen;baulich - blau-grün;KUP;0;;2;2;1;;2;;3;Steckbrief_Entsiegelung.pdf
+Versickerungsmulden;Starkregen;baulich - blau-grün;KUP;1;;1;2;2;;1;;2;Steckbrief_Versickerungsmulden.pdf
 Renaturierung von Gewässern;Starkregen & Hochwasser;baulich - blau-grün;K;0;;3;3;2;1;1;;3;Steckbrief_RenaturierungGewässer.pdf
-Dachbegrünung;Hitze & Starkregen;baulich - blau-grün;KUP;0;;2;2;2;0;0;;3;Steckbrief_Dachbegrünung.pdf
+Dachbegrünung;Hitze & Starkregen;baulich - blau-grün;KUP;0;;2;2;2;;;;3;Steckbrief_Dachbegrünung.pdf
 Klimaangepasster Baumbestand;Hitze & Dürre;baulich - blau-grün;K;0;;2;3;;;;;;Steckbrief_KlimaangepassterBaumbestand.pdf
 Fassadenbegrünung;Hitze & Starkregen;baulich - blau-grün;KUP;0;;2;2;;;;;;Steckbrief_Fassadenbegrünung.pdf
 Natürliche Verschattung öffentlicher Raum;Hitze;baulich - blau-grün;KU;0;;2;2;;;;;;Steckbrief_NatürlicheVerschattungÖffentlicherRaum.pdf
